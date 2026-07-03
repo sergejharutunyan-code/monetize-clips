@@ -685,6 +685,15 @@ a {
 }
 
 /* --------------------------------------------------------------- responsive */
+/* Grid children must be allowed to shrink below their content width, or a wide
+   child (a long stat value, a chart) forces the whole column past the viewport. */
+.grid > * {
+  min-width: 0;
+}
+.main {
+  min-width: 0;
+}
+
 @media (max-width: 960px) {
   .grid-4 {
     grid-template-columns: repeat(2, 1fr);
@@ -694,30 +703,78 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
 @media (max-width: 720px) {
+  /* Never let the page scroll sideways on a phone. */
+  html,
+  body {
+    overflow-x: hidden;
+  }
   .app {
     grid-template-columns: 1fr;
   }
+  /* Sidebar becomes a sticky top bar with a single horizontally-scrollable
+     row of nav chips — compact and thumb-friendly, never wraps or clips. */
   .sidebar {
-    position: static;
+    position: sticky;
+    top: 0;
+    z-index: 20;
     height: auto;
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
+    gap: 4px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
   }
-  .sidebar .brand {
-    padding-bottom: 6px;
+  .sidebar::-webkit-scrollbar {
+    display: none;
+  }
+  .brand {
+    padding: 0 6px 0 0;
+    flex-shrink: 0;
+  }
+  .brand-sub {
+    display: none;
   }
   .nav-item {
     width: auto;
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 8px 12px;
   }
   .nav-spacer {
     display: none;
   }
-  .grid-4 {
-    grid-template-columns: 1fr 1fr;
+  .theme-toggle {
+    margin-top: 0;
+    flex-shrink: 0;
+    white-space: nowrap;
   }
   .main {
-    padding: 20px 16px 50px;
+    padding: 20px 16px 56px;
+  }
+  .page-title {
+    font-size: 21px;
+  }
+}
+
+@media (max-width: 560px) {
+  /* Stat rows and side-by-side cards stack on phones. */
+  .grid-4,
+  .grid-3,
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+  .modal {
+    padding: 18px;
   }
 }
