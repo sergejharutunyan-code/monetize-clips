@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react'
 import { Dashboard } from './components/Dashboard'
+import { Discover } from './components/Discover'
 import { Library } from './components/Library'
 import { Scheduler } from './components/Scheduler'
 import { Analytics } from './components/Analytics'
 import { CaptionStudio } from './components/CaptionStudio'
 import { Playbook } from './components/Playbook'
 
-type View = 'dashboard' | 'library' | 'scheduler' | 'analytics' | 'studio' | 'playbook'
+type View = 'dashboard' | 'discover' | 'library' | 'scheduler' | 'analytics' | 'studio' | 'playbook'
 
 const NAV: { id: View; label: string; ico: string }[] = [
   { id: 'dashboard', label: 'Dashboard', ico: '◲' },
+  { id: 'discover', label: 'Discover', ico: '✨' },
   { id: 'library', label: 'Clip Library', ico: '▤' },
   { id: 'scheduler', label: 'Scheduler', ico: '◷' },
   { id: 'analytics', label: 'Analytics', ico: '◑' },
@@ -59,6 +61,7 @@ export default function App() {
 
       <main className="main">
         {view === 'dashboard' && <Dashboard onNavigate={(v) => setView(v as View)} />}
+        {view === 'discover' && <Discover />}
         {view === 'library' && <Library />}
         {view === 'scheduler' && <Scheduler />}
         {view === 'analytics' && <Analytics />}

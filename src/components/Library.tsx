@@ -104,7 +104,10 @@ export function Library() {
                 return (
                   <tr key={c.id}>
                     <td>
-                      <div className="clip-title">{c.title}</div>
+                      <div className="clip-title">
+                        {c.series && <span className="badge scheduled" style={{ marginRight: 6, fontSize: 10.5 }}>P{c.series.part}/{c.series.total}</span>}
+                        {c.title}
+                      </div>
                       <div className="clip-source">
                         {c.sourceTitle} · {fmtDuration(c.durationSec)} · {c.aspectRatio} · {fmtDate(c.createdAt)}
                       </div>

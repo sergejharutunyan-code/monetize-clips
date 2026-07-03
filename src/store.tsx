@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import type { Clip } from './types'
+import type { Clip, TwoPartConcept } from './types'
 import { seedClips, uid, PLATFORMS, estimateRevenue } from './data'
 
 const STORAGE_KEY = 'clipforge.clips.v1'
@@ -7,6 +7,8 @@ const STORAGE_KEY = 'clipforge.clips.v1'
 interface StoreValue {
   clips: Clip[]
   addClip: (clip: Omit<Clip, 'id' | 'createdAt' | 'posts'>) => void
+  /** Save an AI two-part concept as two linked clips; returns their ids. */
+  addConcept: (concept: TwoPartConcept, opts?: { durationSec?: number }) => string[]
   updateClip: (id: string, patch: Partial<Clip>) => void
   removeClip: (id: string) => void
   resetDemo: () => void
@@ -55,6 +57,40 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           })),
         }
         setClips((prev) => [newClip, ...prev])
+      },
+      addConcept: (concept, opts) => {
+        const seriesId = uid()
+        const now = new Date().toISOString()
+        const emptyPosts = () =>
+          PLATFORMS.map((platform) => ({
+            platform,
+            status: 'not_posted' as const,
+            views: 0,
+            likes: 0,
+            comments: 0,
+            shares: 0,
+            revenue: 0,
+          }))
+        const parts = [concept.part1, concept.part2] as const
+        const created: Clip[] = parts.map((p, i) => ({
+          id: uid(),
+          title: `${concept.sourceTitle} — Part ${i + 1}`,
+          sourceTitle: concept.sourceTitle,
+          sourceCreator: concept.sourceCreator,
+          rights: 'unverified',
+          hook: p.hook,
+          caption: p.caption,
+          hashtags: p.hashtags,
+          niche: concept.niche,
+          durationSec: opts?.durationSec ?? 40,
+          aspectRatio: '9:16',
+          status: 'idea',
+          createdAt: now,
+          posts: emptyPosts(),
+          series: { id: seriesId, part: (i + 1) as 1 | 2, total: 2 },
+        }))
+        setClips((prev) => [...created, ...prev])
+        return created.map((c) => c.id)
       },
       updateClip: (id, patch) => {
         setClips((prev) =>
