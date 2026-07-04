@@ -12,13 +12,8 @@ export interface PlatformPost {
   status: PostStatus
   scheduledAt?: string // ISO datetime
   publishedAt?: string // ISO datetime
+  /** Link to the live post, once published. */
   url?: string
-  views: number
-  likes: number
-  comments: number
-  shares: number
-  /** Estimated payout in USD, derived from views × platform RPM. */
-  revenue: number
 }
 
 /** A short clip cut from a source video, tracked through the pipeline. */
@@ -40,11 +35,16 @@ export interface Clip {
   status: ClipStatus
   createdAt: string // ISO date
   posts: PlatformPost[]
+  /** Source of the rendered clip video: a hosted URL you can play back. */
+  videoUrl?: string
+  /** Whether the clip has been watched and passed review in the player. */
+  validated?: boolean
+  validatedAt?: string // ISO datetime
   /** Links clips cut from the same source as a two-part series. */
   series?: { id: string; part: 1 | 2; total: number }
 }
 
-/** A trending long-form video surfaced in Discovery, a candidate to clip. */
+/** A long-form video surfaced in Discovery, a candidate to clip. */
 export interface SourceVideo {
   id: string
   title: string
@@ -52,11 +52,7 @@ export interface SourceVideo {
   origin: Platform
   url?: string
   niche: string
-  views: number
-  ageHours: number
-  /** 0–100 heuristic combining velocity, recency, and engagement. */
-  viralScore: number
-  /** Short human note on why it's trending. */
+  /** Short human note on why it could clip well. */
   why: string
   thumbGlyph: string
 }

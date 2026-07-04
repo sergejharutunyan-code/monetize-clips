@@ -3,18 +3,18 @@ import { Dashboard } from './components/Dashboard'
 import { Discover } from './components/Discover'
 import { Library } from './components/Library'
 import { Scheduler } from './components/Scheduler'
-import { Analytics } from './components/Analytics'
+import { Validate } from './components/Validate'
 import { CaptionStudio } from './components/CaptionStudio'
 import { Playbook } from './components/Playbook'
 
-type View = 'dashboard' | 'discover' | 'library' | 'scheduler' | 'analytics' | 'studio' | 'playbook'
+type View = 'dashboard' | 'discover' | 'library' | 'validate' | 'scheduler' | 'studio' | 'playbook'
 
 const NAV: { id: View; label: string; ico: string }[] = [
   { id: 'dashboard', label: 'Dashboard', ico: '◲' },
   { id: 'discover', label: 'Discover', ico: '✨' },
   { id: 'library', label: 'Clip Library', ico: '▤' },
+  { id: 'validate', label: 'Validate', ico: '▶' },
   { id: 'scheduler', label: 'Scheduler', ico: '◷' },
-  { id: 'analytics', label: 'Analytics', ico: '◑' },
   { id: 'studio', label: 'Caption Studio', ico: '✎' },
   { id: 'playbook', label: 'Playbook', ico: '★' },
 ]
@@ -63,8 +63,8 @@ export default function App() {
         {view === 'dashboard' && <Dashboard onNavigate={(v) => setView(v as View)} />}
         {view === 'discover' && <Discover />}
         {view === 'library' && <Library />}
+        {view === 'validate' && <Validate />}
         {view === 'scheduler' && <Scheduler />}
-        {view === 'analytics' && <Analytics />}
         {view === 'studio' && <CaptionStudio />}
         {view === 'playbook' && <Playbook />}
       </main>

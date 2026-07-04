@@ -4,33 +4,30 @@ export const PLATFORMS: Platform[] = ['tiktok', 'instagram', 'youtube']
 
 export const PLATFORM_META: Record<
   Platform,
-  { label: string; color: string; glyph: string; rpm: number; note: string }
+  { label: string; color: string; glyph: string; note: string }
 > = {
-  // rpm = estimated USD earned per 1,000 monetized views. Real payouts vary
-  // widely by niche, geography, and program eligibility — these are planning
-  // defaults you can tune per account.
   tiktok: {
     label: 'TikTok',
     color: '#e34948',
     glyph: '♪',
-    rpm: 0.55,
     note: 'Creator Rewards (video > 1 min, original, > 10k followers).',
   },
   instagram: {
     label: 'Instagram',
     color: '#e87ba4',
     glyph: '⬛',
-    rpm: 0.35,
     note: 'Reels play bonuses vary by region and invite-only programs.',
   },
   youtube: {
     label: 'YouTube',
     color: '#eb6834',
     glyph: '▶',
-    rpm: 1.2,
     note: 'Shorts ad revenue share once in the Partner Program.',
   },
 }
+
+/** A small, stable CC0 sample so the player has something to validate out of the box. */
+export const SAMPLE_VIDEO_URL = 'https://mdn.github.io/shared-assets/videos/flower.mp4'
 
 export const NICHES = [
   'Comedy',
@@ -79,12 +76,21 @@ const daysFromNow = (n: number) => {
   return d.toISOString()
 }
 
-/** Estimated payout for a view count on a platform. */
-export const estimateRevenue = (platform: Platform, views: number) =>
-  Math.round((views / 1000) * PLATFORM_META[platform].rpm * 100) / 100
+interface SeedRow {
+  title: string
+  sourceTitle: string
+  sourceCreator: string
+  rights: Clip['rights']
+  hook: string
+  niche: string
+  durationSec: number
+  status: Clip['status']
+  aspectRatio?: Clip['aspectRatio']
+  videoUrl?: string
+}
 
 export function seedClips(): Clip[] {
-  const raw: Array<Partial<Clip> & { views: [number, number, number] }> = [
+  const raw: SeedRow[] = [
     {
       title: 'The 4-word line that broke the internet',
       sourceTitle: 'Founder Fireside — Ep. 212',
@@ -94,7 +100,8 @@ export function seedClips(): Clip[] {
       niche: 'Podcast',
       durationSec: 47,
       status: 'published',
-      views: [1_240_000, 420_000, 88_000],
+      aspectRatio: '16:9',
+      videoUrl: SAMPLE_VIDEO_URL,
     },
     {
       title: 'Buzzer-beater from half court',
@@ -105,7 +112,6 @@ export function seedClips(): Clip[] {
       niche: 'Sports',
       durationSec: 22,
       status: 'published',
-      views: [860_000, 610_000, 210_000],
     },
     {
       title: 'Nobody expected the plot twist',
@@ -115,8 +121,7 @@ export function seedClips(): Clip[] {
       hook: 'Watch till the end — you’ll rewind it.',
       niche: 'Comedy',
       durationSec: 31,
-      status: 'published',
-      views: [2_100_000, 340_000, 55_000],
+      status: 'scheduled',
     },
     {
       title: 'The mindset shift that changed everything',
@@ -126,8 +131,7 @@ export function seedClips(): Clip[] {
       hook: 'Ever wonder why the top 1% never quit?',
       niche: 'Motivation',
       durationSec: 58,
-      status: 'scheduled',
-      views: [0, 0, 0],
+      status: 'ready',
     },
     {
       title: 'This $12 gadget felt illegal to use',
@@ -138,7 +142,6 @@ export function seedClips(): Clip[] {
       niche: 'Tech',
       durationSec: 41,
       status: 'ready',
-      views: [0, 0, 0],
     },
     {
       title: 'Insane clutch 1v5 to win the match',
@@ -149,7 +152,6 @@ export function seedClips(): Clip[] {
       niche: 'Gaming',
       durationSec: 28,
       status: 'editing',
-      views: [0, 0, 0],
     },
     {
       title: 'The compound interest trick nobody teaches',
@@ -160,45 +162,40 @@ export function seedClips(): Clip[] {
       niche: 'Finance',
       durationSec: 52,
       status: 'idea',
-      views: [0, 0, 0],
     },
   ]
 
   return raw.map((r, i) => {
     const created = daysFromNow(-14 + i)
-    const posts = PLATFORMS.map((platform, pi) => {
-      const views = r.views[pi]
-      const published = r.status === 'published' && views > 0
-      const scheduled = r.status === 'scheduled'
-      return {
-        platform,
-        status: published ? ('published' as const) : scheduled ? ('scheduled' as const) : ('not_posted' as const),
-        publishedAt: published ? created : undefined,
-        scheduledAt: scheduled ? daysFromNow(1 + pi) : undefined,
-        url: published ? `https://example.com/${platform}/${i}${pi}` : undefined,
-        views,
-        likes: Math.round(views * 0.08),
-        comments: Math.round(views * 0.004),
-        shares: Math.round(views * 0.012),
-        revenue: estimateRevenue(platform, views),
-      }
-    })
-    const niche = r.niche as string
+    const isPublished = r.status === 'published'
+    const isScheduled = r.status === 'scheduled'
+    const posts = PLATFORMS.map((platform, pi) => ({
+      platform,
+      status: isPublished ? ('published' as const) : isScheduled ? ('scheduled' as const) : ('not_posted' as const),
+      publishedAt: isPublished ? created : undefined,
+      scheduledAt: isScheduled ? daysFromNow(1 + pi) : undefined,
+      url: isPublished ? `https://example.com/${platform}/${i}` : undefined,
+    }))
+    // Anything already published or scheduled has, by definition, cleared review.
+    const validated = isPublished || isScheduled
     return {
       id: uid(),
-      title: r.title!,
-      sourceTitle: r.sourceTitle!,
-      sourceCreator: r.sourceCreator!,
-      rights: r.rights!,
-      hook: r.hook!,
+      title: r.title,
+      sourceTitle: r.sourceTitle,
+      sourceCreator: r.sourceCreator,
+      rights: r.rights,
+      hook: r.hook,
       caption: `${r.hook} Full clip below ⬇️`,
-      hashtags: [...HASHTAG_BANK.base.slice(0, 3), ...(HASHTAG_BANK[niche] ?? []).slice(0, 3)],
-      niche,
-      durationSec: r.durationSec!,
-      aspectRatio: '9:16',
-      status: r.status!,
+      hashtags: [...HASHTAG_BANK.base.slice(0, 3), ...(HASHTAG_BANK[r.niche] ?? []).slice(0, 3)],
+      niche: r.niche,
+      durationSec: r.durationSec,
+      aspectRatio: r.aspectRatio ?? '9:16',
+      status: r.status,
       createdAt: created,
       posts,
-    } as Clip
+      videoUrl: r.videoUrl,
+      validated,
+      validatedAt: validated ? created : undefined,
+    }
   })
 }

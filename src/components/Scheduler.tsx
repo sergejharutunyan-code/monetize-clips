@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../store'
-import { PLATFORM_META, PLATFORMS, estimateRevenue } from '../data'
+import { PLATFORM_META, PLATFORMS } from '../data'
 import { fmtDateTime, relDay } from '../utils'
 import type { Clip, Platform, PlatformPost } from '../types'
 
@@ -43,9 +43,8 @@ export function Scheduler() {
   }
 
   const publishNow = (clip: Clip, platform: Platform) => {
-    const v = prompt(`Publish to ${PLATFORM_META[platform].label}. Enter starting view count (or leave blank):`, '0')
-    if (v === null) return
-    const views = Math.max(0, parseInt(v.replace(/\D/g, ''), 10) || 0)
+    const url = prompt(`Mark live on ${PLATFORM_META[platform].label}. Paste the live post URL (optional):`, '')
+    if (url === null) return
     const posts = clip.posts.map((p) =>
       p.platform === platform
         ? {
@@ -53,16 +52,12 @@ export function Scheduler() {
             status: 'published' as const,
             publishedAt: new Date().toISOString(),
             scheduledAt: undefined,
-            views,
-            likes: Math.round(views * 0.08),
-            comments: Math.round(views * 0.004),
-            shares: Math.round(views * 0.012),
-            revenue: estimateRevenue(platform, views),
+            url: url.trim() || p.url,
           }
         : p,
     )
-    const allPublished = posts.every((p) => p.status === 'published' || p.status === 'not_posted')
-    updateClip(clip.id, { posts, status: allPublished && posts.some((p) => p.status === 'published') ? 'published' : clip.status })
+    const anyPublished = posts.some((p) => p.status === 'published')
+    updateClip(clip.id, { posts, status: anyPublished ? 'published' : clip.status })
   }
 
   return (

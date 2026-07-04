@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Clip, TwoPartConcept } from './types'
-import { seedClips, uid, PLATFORMS, estimateRevenue } from './data'
+import { seedClips, uid, PLATFORMS } from './data'
 
 const STORAGE_KEY = 'clipforge.clips.v1'
 
@@ -46,15 +46,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ...clip,
           id: uid(),
           createdAt: new Date().toISOString(),
-          posts: PLATFORMS.map((platform) => ({
-            platform,
-            status: 'not_posted',
-            views: 0,
-            likes: 0,
-            comments: 0,
-            shares: 0,
-            revenue: 0,
-          })),
+          validated: false,
+          posts: PLATFORMS.map((platform) => ({ platform, status: 'not_posted' })),
         }
         setClips((prev) => [newClip, ...prev])
       },
@@ -62,15 +55,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const seriesId = uid()
         const now = new Date().toISOString()
         const emptyPosts = () =>
-          PLATFORMS.map((platform) => ({
-            platform,
-            status: 'not_posted' as const,
-            views: 0,
-            likes: 0,
-            comments: 0,
-            shares: 0,
-            revenue: 0,
-          }))
+          PLATFORMS.map((platform) => ({ platform, status: 'not_posted' as const }))
         const parts = [concept.part1, concept.part2] as const
         const created: Clip[] = parts.map((p, i) => ({
           id: uid(),
@@ -87,24 +72,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           status: 'idea',
           createdAt: now,
           posts: emptyPosts(),
+          validated: false,
           series: { id: seriesId, part: (i + 1) as 1 | 2, total: 2 },
         }))
         setClips((prev) => [...created, ...prev])
         return created.map((c) => c.id)
       },
       updateClip: (id, patch) => {
-        setClips((prev) =>
-          prev.map((c) => {
-            if (c.id !== id) return c
-            const merged = { ...c, ...patch }
-            // keep revenue estimates in sync when views change
-            merged.posts = merged.posts.map((p) => ({
-              ...p,
-              revenue: estimateRevenue(p.platform, p.views),
-            }))
-            return merged
-          }),
-        )
+        setClips((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)))
       },
       removeClip: (id) => setClips((prev) => prev.filter((c) => c.id !== id)),
       resetDemo: () => setClips(seedClips()),

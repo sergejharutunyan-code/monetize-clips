@@ -1,106 +1,62 @@
-import type { Clip, Platform } from './types'
+import type { Clip, ClipStatus, Platform } from './types'
 import { PLATFORMS, PLATFORM_META } from './data'
 
-export interface Totals {
-  clips: number
-  published: number
-  scheduled: number
-  views: number
-  revenue: number
-  engagement: number
+export const CLIP_STATUSES: ClipStatus[] = ['idea', 'editing', 'ready', 'scheduled', 'published']
+
+export interface Overview {
+  total: number
+  validated: number
+  /** Ready/edited but not yet validated and not yet published. */
+  needsValidation: number
+  scheduledPosts: number
+  publishedPosts: number
+  withVideo: number
 }
 
-export function totals(clips: Clip[]): Totals {
-  let published = 0
-  let scheduled = 0
-  let views = 0
-  let revenue = 0
-  let interactions = 0
+export function overview(clips: Clip[]): Overview {
+  let validated = 0
+  let needsValidation = 0
+  let scheduledPosts = 0
+  let publishedPosts = 0
+  let withVideo = 0
   for (const c of clips) {
+    if (c.validated) validated++
+    else if (c.status !== 'published') needsValidation++
+    if (c.videoUrl) withVideo++
     for (const p of c.posts) {
-      if (p.status === 'published') published++
-      if (p.status === 'scheduled') scheduled++
-      views += p.views
-      revenue += p.revenue
-      interactions += p.likes + p.comments + p.shares
+      if (p.status === 'scheduled') scheduledPosts++
+      if (p.status === 'published') publishedPosts++
     }
   }
-  return {
-    clips: clips.length,
-    published,
-    scheduled,
-    views,
-    revenue: Math.round(revenue * 100) / 100,
-    engagement: views > 0 ? Math.round((interactions / views) * 1000) / 10 : 0,
-  }
+  return { total: clips.length, validated, needsValidation, scheduledPosts, publishedPosts, withVideo }
 }
 
-export function byPlatform(clips: Clip[]) {
+/** Count of clips in each pipeline stage — real workflow composition, not a metric. */
+export function statusCounts(clips: Clip[]): { status: ClipStatus; count: number }[] {
+  return CLIP_STATUSES.map((status) => ({
+    status,
+    count: clips.filter((c) => c.status === status).length,
+  }))
+}
+
+/** How many posts sit at each stage per platform. */
+export function platformCounts(clips: Clip[]) {
   return PLATFORMS.map((platform: Platform) => {
-    let views = 0
-    let revenue = 0
-    let posts = 0
+    let scheduled = 0
+    let published = 0
     for (const c of clips) {
       for (const p of c.posts) {
-        if (p.platform === platform && p.status === 'published') {
-          views += p.views
-          revenue += p.revenue
-          posts++
-        }
+        if (p.platform !== platform) continue
+        if (p.status === 'scheduled') scheduled++
+        if (p.status === 'published') published++
       }
     }
     return {
       platform,
       label: PLATFORM_META[platform].label,
       color: PLATFORM_META[platform].color,
-      views,
-      revenue: Math.round(revenue * 100) / 100,
-      posts,
+      scheduled,
+      published,
     }
   })
-}
-
-export interface ClipRollup {
-  clip: Clip
-  views: number
-  revenue: number
-}
-
-export function clipRollup(clips: Clip[]): ClipRollup[] {
-  return clips
-    .map((clip) => {
-      let views = 0
-      let revenue = 0
-      for (const p of clip.posts) {
-        views += p.views
-        revenue += p.revenue
-      }
-      return { clip, views, revenue: Math.round(revenue * 100) / 100 }
-    })
-    .sort((a, b) => b.views - a.views)
-}
-
-/** Revenue attributed across the last `days` days by publish date. */
-export function revenueTrend(clips: Clip[], days = 14) {
-  const buckets: { label: string; value: number }[] = []
-  const now = new Date()
-  const map = new Map<string, number>()
-  for (const c of clips) {
-    for (const p of c.posts) {
-      if (p.status === 'published' && p.publishedAt) {
-        const key = new Date(p.publishedAt).toISOString().slice(0, 10)
-        map.set(key, (map.get(key) ?? 0) + p.revenue)
-      }
-    }
-  }
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(now)
-    d.setDate(d.getDate() - i)
-    const key = d.toISOString().slice(0, 10)
-    buckets.push({
-      label: d.toLocaleDateString(undefined, { day: 'numeric' }),
-      value: Math.round((map.get(key) ?? 0) * 100) / 100,
-    })
-  }
-  return buckets
 }

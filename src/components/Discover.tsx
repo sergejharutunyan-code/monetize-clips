@@ -1,8 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import type { SourceVideo, TwoPartConcept, ConceptPart } from '../types'
-import { seedDiscovery, scoreVideo } from '../discovery'
+import { seedDiscovery } from '../discovery'
 import { NICHES, PLATFORM_META, uid } from '../data'
-import { fmtNum } from '../utils'
 import { useStore } from '../store'
 import {
   analyzeVideo,
@@ -27,15 +26,13 @@ export function Discover() {
     saveAISettings(next)
   }
 
-  const ranked = useMemo(() => [...feed].sort((a, b) => b.viralScore - a.viralScore), [feed])
-
   return (
     <>
       <div className="page-head">
         <div>
           <h1 className="page-title">Discover</h1>
           <p className="page-desc">
-            Find trending videos, then let AI break each one into a two-part clip series — a hook and its payoff — ready to drop into your pipeline.
+            Start from an example or paste your own video, then let AI break it into a two-part clip series — a hook and its payoff — ready to drop into your pipeline.
           </p>
         </div>
       </div>
@@ -85,11 +82,11 @@ export function Discover() {
 
       <div className="card card-pad">
         <div className="card-head">
-          <h3 className="card-title">Trending now</h3>
-          <span className="card-hint">ranked by velocity · demo feed</span>
+          <h3 className="card-title">Example sources</h3>
+          <span className="card-hint">starting points to workshop</span>
         </div>
         <div className="grid grid-3">
-          {ranked.map((v) => (
+          {feed.map((v) => (
             <VideoCard key={v.id} video={v} onWorkshop={() => setActive(v)} />
           ))}
         </div>
@@ -103,10 +100,7 @@ export function Discover() {
 function VideoCard({ video, onWorkshop }: { video: SourceVideo; onWorkshop: () => void }) {
   return (
     <div style={{ background: 'var(--page)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 14px 0' }}>
-        <div style={{ fontSize: 30 }}>{video.thumbGlyph}</div>
-        <ScoreRing score={video.viralScore} />
-      </div>
+      <div style={{ padding: '14px 14px 0', fontSize: 30 }}>{video.thumbGlyph}</div>
       <div style={{ padding: '8px 14px 14px', flex: 1, display: 'flex', flexDirection: 'column' }}>
         <div className="clip-title" style={{ fontSize: 14, lineHeight: 1.3 }}>{video.title}</div>
         <div className="clip-source" style={{ marginTop: 4 }}>
@@ -114,38 +108,12 @@ function VideoCard({ video, onWorkshop }: { video: SourceVideo; onWorkshop: () =
         </div>
         <div className="row" style={{ gap: 8, margin: '10px 0' }}>
           <span className="badge">{video.niche}</span>
-          <span className="badge">{fmtNum(video.views)} views</span>
-          <span className="badge">{video.ageHours}h old</span>
         </div>
         <div className="muted" style={{ fontSize: 12.5, flex: 1 }}>{video.why}</div>
         <button className="btn primary sm" style={{ marginTop: 12, justifyContent: 'center' }} onClick={onWorkshop}>
           ✎ Workshop into clips
         </button>
       </div>
-    </div>
-  )
-}
-
-function ScoreRing({ score }: { score: number }) {
-  const color = score >= 70 ? 'var(--good)' : score >= 40 ? 'var(--series-3)' : 'var(--text-muted)'
-  return (
-    <div
-      title={`Viral score ${score}/100`}
-      style={{
-        width: 42,
-        height: 42,
-        borderRadius: '50%',
-        display: 'grid',
-        placeItems: 'center',
-        fontSize: 13,
-        fontWeight: 700,
-        color,
-        background: `conic-gradient(${color} ${score * 3.6}deg, var(--surface-2) 0)`,
-      }}
-    >
-      <span style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--page)', display: 'grid', placeItems: 'center' }}>
-        {score}
-      </span>
     </div>
   )
 }
@@ -170,9 +138,6 @@ function AddByUrl({
       origin: 'youtube',
       url: url.trim() || undefined,
       niche,
-      views: 0,
-      ageHours: 1,
-      viralScore: scoreVideo(0, 1),
       why: 'Added manually.',
       thumbGlyph: '📎',
     }

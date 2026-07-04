@@ -15,6 +15,7 @@ const emptyDraft = () => ({
   durationSec: 30,
   aspectRatio: '9:16' as AspectRatio,
   status: 'idea' as Clip['status'],
+  videoUrl: '',
 })
 
 export function ClipModal({ existing, onClose }: { existing?: Clip; onClose: () => void }) {
@@ -37,8 +38,8 @@ export function ClipModal({ existing, onClose }: { existing?: Clip; onClose: () 
     if (existing) {
       updateClip(existing.id, d)
     } else {
-      const { title, sourceTitle, sourceCreator, rights, hook, caption, hashtags, niche, durationSec, aspectRatio, status } = d
-      addClip({ title, sourceTitle, sourceCreator, rights, hook, caption, hashtags, niche, durationSec, aspectRatio, status })
+      const { title, sourceTitle, sourceCreator, rights, hook, caption, hashtags, niche, durationSec, aspectRatio, status, videoUrl } = d
+      addClip({ title, sourceTitle, sourceCreator, rights, hook, caption, hashtags, niche, durationSec, aspectRatio, status, videoUrl: videoUrl || undefined })
     }
     onClose()
   }
@@ -87,6 +88,11 @@ export function ClipModal({ existing, onClose }: { existing?: Clip; onClose: () 
         <div className="field">
           <label>Hook (first 1–3 seconds)</label>
           <input value={d.hook} onChange={(e) => set('hook', e.target.value)} placeholder="The scroll-stopping opening line" />
+        </div>
+
+        <div className="field">
+          <label>Clip video URL (optional)</label>
+          <input value={d.videoUrl ?? ''} onChange={(e) => set('videoUrl', e.target.value)} placeholder="https://…/clip.mp4 — play it in the Validate tab" />
         </div>
 
         <div className="field">

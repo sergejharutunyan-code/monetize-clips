@@ -1,15 +1,17 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../store'
 import { PLATFORM_META, PLATFORMS, NICHES } from '../data'
-import { fmtNum, fmtDuration, fmtDate } from '../utils'
+import { fmtDuration, fmtDate } from '../utils'
 import type { Clip, ClipStatus } from '../types'
 import { ClipModal } from './ClipModal'
+import { ClipPlayer } from './ClipPlayer'
 
 const STATUSES: (ClipStatus | 'all')[] = ['all', 'idea', 'editing', 'ready', 'scheduled', 'published']
 
 export function Library() {
   const { clips, removeClip } = useStore()
   const [editing, setEditing] = useState<Clip | null>(null)
+  const [playing, setPlaying] = useState<Clip | null>(null)
   const [creating, setCreating] = useState(false)
   const [status, setStatus] = useState<ClipStatus | 'all'>('all')
   const [niche, setNiche] = useState<string>('all')
@@ -94,13 +96,11 @@ export function Library() {
                 <th>Rights</th>
                 <th>Platforms</th>
                 <th>Status</th>
-                <th className="num">Views</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((c) => {
-                const views = c.posts.reduce((s, p) => s + p.views, 0)
                 return (
                   <tr key={c.id}>
                     <td>
@@ -137,9 +137,14 @@ export function Library() {
                     </td>
                     <td>
                       <span className={`badge ${c.status}`}>{c.status}</span>
+                      {c.validated && (
+                        <span className="badge published" style={{ marginLeft: 6, fontSize: 10.5 }} title="Validated in the player">✓</span>
+                      )}
                     </td>
-                    <td className="num">{fmtNum(views)}</td>
                     <td className="num">
+                      <button className="btn ghost sm" onClick={() => setPlaying(c)} title="Open the video player">
+                        ▶ {c.videoUrl ? 'Play' : 'Add video'}
+                      </button>
                       <button className="btn ghost sm" onClick={() => setEditing(c)}>
                         Edit
                       </button>
@@ -162,6 +167,7 @@ export function Library() {
 
       {creating && <ClipModal onClose={() => setCreating(false)} />}
       {editing && <ClipModal existing={editing} onClose={() => setEditing(null)} />}
+      {playing && <ClipPlayer clip={playing} onClose={() => setPlaying(null)} />}
     </>
   )
 }

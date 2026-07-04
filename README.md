@@ -6,7 +6,11 @@ Reels, and YouTube Shorts** from one place.
 
 It is a planning and operations tool — a dashboard for the workflow — not an
 auto-uploader or a scraper. You bring the footage and the accounts; ClipForge
-helps you organize, schedule, caption, and measure.
+helps you organize, validate, schedule, and caption.
+
+It tracks only **real workflow state** — statuses, counts, scheduling, and
+validation. There are no invented performance numbers (views, likes, revenue);
+plug in a real analytics source when you have one.
 
 ![stack: React + TypeScript + Vite](https://img.shields.io/badge/React-TypeScript-blue)
 
@@ -14,17 +18,18 @@ helps you organize, schedule, caption, and measure.
 
 | Area | What you get |
 |------|--------------|
-| **Dashboard** | Estimated revenue, total views, engagement, and pipeline at a glance, with a 14-day revenue trend and per-platform breakdown. |
-| **Discover + AI workshop** | A ranked feed of trending videos (or paste your own). One click breaks a video into a **two-part clip series** — Part 1 (hook + cliffhanger) and Part 2 (payoff) — each with a short and broad-strokes premise, a native hook, caption, hashtags, and a suggested cut window. Save the pair straight into the Library as a linked series. Runs on a built-in **local engine** or on the **Claude API** (see below). |
-| **Clip Library** | Track every clip from idea → editing → ready → scheduled → published, with a **rights/clearance** field, niche, hook, caption, hashtags, duration, and aspect ratio. Search and filter. Two-part series show a `P1/2` · `P2/2` badge. |
-| **Scheduler** | Queue a clip onto each platform at a chosen time, stagger releases, and mark posts live. |
-| **Analytics** | View-share donut, revenue trend, per-clip performance, and a full platform table (with tunable RPM). |
+| **Dashboard** | Honest workflow overview: clip counts, how many are validated vs. need review, live/scheduled posts, a pipeline-by-stage breakdown, and per-platform posting counts. |
+| **Discover + AI workshop** | Example source videos (or paste your own). One click breaks a video into a **two-part clip series** — Part 1 (hook + cliffhanger) and Part 2 (payoff) — each with a short and broad-strokes premise, a native hook, caption, hashtags, and a suggested cut window. Save the pair straight into the Library as a linked series. Runs on a built-in **local engine** or on the **Claude API** (see below). |
+| **Clip Library** | Track every clip from idea → editing → ready → scheduled → published, with a **rights/clearance** field, niche, hook, caption, hashtags, duration, aspect ratio, and a video URL. Search and filter; play any clip. Two-part series show a `P1/2` · `P2/2` badge. |
+| **Validate** | A native HTML5 video player to review clips before they ship. Load the rendered clip (**upload a file** or **paste a URL**), watch it in the correct aspect-ratio frame with the **hook overlaid**, run a review checklist, and mark it **validated** — a real status that flows through the pipeline. |
+| **Scheduler** | Queue a clip onto each platform at a chosen time, stagger releases, and mark posts live (optionally with the live post URL). |
 | **Caption Studio** | Generate a hook (from proven formulas), caption, and platform-tuned hashtag set — copy-ready per platform. |
 | **Playbook** | The operating model plus the **legal/compliance** rules that keep accounts alive. |
 
 Data is stored **locally in your browser** (localStorage) — no account, no server,
-no tracking. The app ships with a demo dataset you can reset or clear from the
-Playbook page.
+no tracking. The app ships with example clips you can reset or clear from the
+Playbook page. (Uploaded video files play in the current session; a saved video
+URL persists with the clip.)
 
 ## Responsible use
 
@@ -88,8 +93,8 @@ src/
   App.tsx            # shell + navigation + theme
   store.tsx          # localStorage-backed state (+ save two-part concept)
   data.ts            # platforms, niches, hashtag banks, hook formulas, seed data
-  discovery.ts       # trending-feed seed + viral-score heuristic
-  metrics.ts         # aggregations (totals, per-platform, trends)
+  discovery.ts       # example source videos to workshop
+  metrics.ts         # honest workflow counts (statuses, validation, posting)
   types.ts           # domain model
   utils.ts           # formatting helpers
   ai/
@@ -99,5 +104,5 @@ src/
     settings.ts      # AI provider/proxy settings (localStorage)
   components/
     Dashboard.tsx  Discover.tsx  Library.tsx  ClipModal.tsx  Scheduler.tsx
-    Analytics.tsx  CaptionStudio.tsx  Playbook.tsx  charts.tsx
+    Validate.tsx   ClipPlayer.tsx  CaptionStudio.tsx  Playbook.tsx
 ```
