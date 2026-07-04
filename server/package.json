@@ -1,0 +1,15 @@
+{
+  "name": "clipforge-server",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "ClipForge backend — accounts, clip sync, Claude + YouTube proxies, and publishing.",
+  "scripts": {
+    "start": "node --experimental-sqlite index.mjs",
+    "dev": "node --experimental-sqlite --watch index.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.110.0",
+    "express": "^4.21.2"
+  }
+}

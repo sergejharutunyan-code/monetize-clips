@@ -9,6 +9,8 @@ on:
     paths-ignore:
       - 'README.md'
       - 'ROADMAP.md'
+      - 'BACKEND.md'
+      - 'server/**'
   workflow_dispatch:
 
 # Allow the workflow to publish to Pages and mint the deploy token.
