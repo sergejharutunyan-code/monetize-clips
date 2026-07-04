@@ -19,7 +19,8 @@ plug in a real analytics source when you have one.
 | Area | What you get |
 |------|--------------|
 | **Dashboard** | Honest workflow overview: clip counts, how many are validated vs. need review, live/scheduled posts, a pipeline-by-stage breakdown, and per-platform posting counts. |
-| **Discover + AI workshop** | Example source videos (or paste your own). One click breaks a video into a **two-part clip series** — Part 1 (hook + cliffhanger) and Part 2 (payoff) — each with a short and broad-strokes premise, a native hook, caption, hashtags, and a suggested cut window. Save the pair straight into the Library as a linked series. Runs on a built-in **local engine** or on the **Claude API** (see below). |
+| **Discover + AI workshop** | **Live trending videos** from the YouTube Data API (bring your own key) or example sources. One click breaks a video into a **two-part clip series** — Part 1 (hook + cliffhanger) and Part 2 (payoff) — each with a short and broad-strokes premise, a native hook, caption, hashtags, and a suggested cut window. Save the pair into the Library as a linked series. Runs on a built-in **local engine** or the **Claude API**. |
+| **Clip Editor** | Turn a source video into a real vertical clip — **trim**, **reframe to 9:16** (focus + zoom), optionally **burn in the hook caption**, and **export a playable file**. Runs entirely in the browser (Canvas + MediaRecorder, no upload/backend). Download it or add it straight to the Library. |
 | **Clip Library** | Track every clip from idea → editing → ready → scheduled → published, with a **rights/clearance** field, niche, hook, caption, hashtags, duration, aspect ratio, and a video URL. Search and filter; play any clip. Two-part series show a `P1/2` · `P2/2` badge. |
 | **Validate** | A native HTML5 video player to review clips before they ship. Load the rendered clip (**upload a file** or **paste a URL**), watch it in the correct aspect-ratio frame with the **hook overlaid**, run a review checklist, and mark it **validated** — a real status that flows through the pipeline. |
 | **Scheduler** | Queue a clip onto each platform at a chosen time, stagger releases, and mark posts live (optionally with the live post URL). |
@@ -102,7 +103,9 @@ src/
     local.ts         # offline template engine
     claude.ts        # calls the Claude proxy
     settings.ts      # AI provider/proxy settings (localStorage)
+  clipeditor.ts      # canvas + MediaRecorder clip rendering engine
+  trending/          # trending sources (YouTube Data API + dispatcher)
   components/
-    Dashboard.tsx  Discover.tsx  Library.tsx  ClipModal.tsx  Scheduler.tsx
-    Validate.tsx   ClipPlayer.tsx  CaptionStudio.tsx  Playbook.tsx
+    Dashboard.tsx  Discover.tsx  ClipEditor.tsx  Library.tsx  ClipModal.tsx
+    Scheduler.tsx  Validate.tsx  ClipPlayer.tsx  CaptionStudio.tsx  Playbook.tsx
 ```

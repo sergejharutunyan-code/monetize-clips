@@ -779,6 +779,39 @@ a {
   }
 }
 
+/* --------------------------------------------------------------- editor */
+.editor-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.editor-stage {
+  display: flex;
+  justify-content: center;
+  background: #0a0a0a;
+  border-radius: var(--radius-sm);
+  padding: 10px;
+}
+.editor-canvas {
+  max-height: 60vh;
+  max-width: 100%;
+  border-radius: 8px;
+  background: #000;
+  display: block;
+}
+input[type='range'] {
+  accent-color: var(--accent);
+}
+@media (max-width: 720px) {
+  .editor-grid {
+    grid-template-columns: 1fr;
+  }
+  .editor-canvas {
+    max-height: 52vh;
+  }
+}
+
 /* --------------------------------------------------------------- responsive */
 /* Grid children must be allowed to shrink below their content width, or a wide
    child (a long stat value, a chart) forces the whole column past the viewport. */

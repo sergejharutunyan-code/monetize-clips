@@ -41,11 +41,13 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` planned
 
 ## Phase 3 — Real media pipeline
 
-- [ ] Source ingestion: import a long-form video (upload or link) into a project.
-- [ ] In-app or worker-based **clip rendering**: trim to the chosen window,
-      reframe to 9:16 (safe-area aware), burn in captions, ensure watermark-free.
-- [ ] Object storage for rendered clips (so the player validates real files, not
-      just external URLs) with thumbnails.
+- [x] Source ingestion: load a long-form video file into the Clip Editor.
+- [x] In-app **clip rendering**: trim to a window, reframe to 9:16 (focus + zoom),
+      burn in the hook caption, and export a real playable clip file — all
+      client-side (Canvas + MediaRecorder), no backend. Add straight to Library.
+- [ ] Object storage for rendered clips (so added clips persist past a reload,
+      not just as session object URLs) with thumbnails.
+- [ ] Zoom/pan keyframes, multi-segment cuts, and beat/scene detection.
 - [ ] Auto-transcription → suggest clip-worthy moments to feed the AI workshop.
 
 ## Phase 4 — Real publishing integrations
