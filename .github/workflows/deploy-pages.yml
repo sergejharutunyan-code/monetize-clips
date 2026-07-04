@@ -1,4 +1,5 @@
-# Publishes the built app to GitHub Pages (repo is public; Pages on free plan).
+# Publishes the built app to GitHub Pages.
+# Pages is enabled with Source = "GitHub Actions" in repo settings.
 name: Deploy to GitHub Pages
 
 on:
