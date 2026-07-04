@@ -1,3 +1,4 @@
+# Publishes the built app to GitHub Pages (repo is public; Pages on free plan).
 name: Deploy to GitHub Pages
 
 on:
