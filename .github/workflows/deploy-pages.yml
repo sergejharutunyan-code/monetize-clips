@@ -8,6 +8,7 @@ on:
     branches: [claude/viral-video-monetization-x2r5vv]
     paths-ignore:
       - 'README.md'
+      - 'ROADMAP.md'
   workflow_dispatch:
 
 # Allow the workflow to publish to Pages and mint the deploy token.
