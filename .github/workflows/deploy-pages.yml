@@ -1,5 +1,6 @@
 # Publishes the built app to GitHub Pages.
 # Pages is enabled with Source = "GitHub Actions" in repo settings.
+# (re-run: transient Pages backend hiccup)
 name: Deploy to GitHub Pages
 
 on:
