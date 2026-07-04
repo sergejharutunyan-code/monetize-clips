@@ -52,35 +52,32 @@ npm run build    # type-check and build to dist/
 npm run preview  # preview the production build
 ```
 
-## Powering the AI workshop with Claude
+## Optional backend (accounts, sync, AI, publishing)
 
-The Discover workshop has two engines, switchable in the UI (Discover → AI engine):
-
-- **Local (offline)** — a deterministic template engine. Instant, no key, and the
-  default. Great for workshopping the two-part format.
-- **Claude API** — real model-generated concepts via a small proxy server.
-
-The proxy (`server/index.mjs`) holds your `ANTHROPIC_API_KEY` **server-side** and
-calls the Claude API — the browser never sees the key. It uses the official
-`@anthropic-ai/sdk` with `claude-opus-4-8`, adaptive thinking, and structured
-JSON output, so the response always matches the app's schema.
+The app is **fully usable offline** — state persists to `localStorage` and the AI
+workshop has a built-in local engine. Connect the optional backend (`server/`) to
+add **accounts**, **cloud clip sync**, server-side **Claude** + **YouTube trending**
+proxies (keys stay server-side), and **YouTube publishing**.
 
 ```bash
-ANTHROPIC_API_KEY=sk-ant-... npm run server   # starts the proxy on :8787
+cd server
+cp .env.example .env    # fill in the keys you have (all optional to boot)
+npm install
+npm start               # http://localhost:8787
 ```
 
-Then in the app, switch the AI engine to **Claude API** (proxy URL defaults to
-`http://localhost:8787`). If the proxy is down or has no key, the workshop
-**transparently falls back to the local engine** and tells you why — it never
-dead-ends. Config via env: `PORT`, `CLIPFORGE_MODEL`, `CLIPFORGE_ALLOW_ORIGIN`.
+Then, in the app: **Playbook → Account & Sync** to create an account and connect,
+**Discover → AI engine → Claude API** to use the workshop proxy, and **Clip Editor →
+Publish to YouTube** to post an exported clip. It uses Node 22's built-in SQLite —
+no database to install. Full setup (Docker deploy, YouTube OAuth, Instagram/TikTok
+gating) is in **[BACKEND.md](./BACKEND.md)**.
 
-> The proxy is optional. `npm run dev` alone gives you the full app on the local
-> engine with no backend.
+> The backend is optional; without it, everything runs locally in the browser.
 
 ## Tech
 
-- **React 18 + TypeScript**, built with **Vite**
-- No backend — state persists to `localStorage`
+- **React 18 + TypeScript**, built with **Vite**; local-first (`localStorage`)
+- **Backend** (optional): Node 22 + Express + built-in SQLite (`server/`)
 - Self-contained SVG charts; theme-aware (light/dark) with an accessible,
   colorblind-validated palette
 - Zero runtime dependencies beyond React

@@ -165,7 +165,7 @@ export function Discover() {
         </div>
         {settings.provider === 'claude' && (
           <div className="callout info" style={{ marginTop: 14 }}>
-            Run the bundled proxy with <code>ANTHROPIC_API_KEY=… node server/index.mjs</code>. It holds the key server-side and calls Claude — the browser never sees it. See the project README.
+            Run the backend (<code>cd server &amp;&amp; ANTHROPIC_API_KEY=… npm start</code>) and point the proxy URL at it. The key stays server-side — the browser never sees it. See BACKEND.md.
           </div>
         )}
       </div>

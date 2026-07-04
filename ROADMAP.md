@@ -32,12 +32,14 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` planned
 
 ## Phase 2 — Accounts & backend
 
-- [ ] Replace localStorage with a real backend (DB + API) so data is durable and
-      multi-device.
-- [ ] Auth (email/OAuth) and per-user workspaces.
-- [ ] Deploy the Claude proxy as a real service (env-managed key, rate limits,
-      logging) instead of a local script.
-- [ ] Secrets/config management; environment separation (dev/prod).
+- [x] Real backend (`server/`) with a DB + API — Node 22 built-in SQLite, no
+      native build. Email + password accounts (scrypt), Bearer-token sessions.
+- [x] Cloud **clip sync** (pull/push) per account; localStorage stays the offline
+      default, connect a backend to sync across devices.
+- [x] Claude + YouTube proxies folded into the service (server-side keys);
+      Dockerfile + `.env.example` + `BACKEND.md` runbook. *(you deploy it)*
+- [ ] Managed hosting + automatic (vs. manual pull/push) sync, per-clip conflict
+      handling, rate limits, and dev/prod separation.
 
 ## Phase 3 — Real media pipeline
 
@@ -52,9 +54,13 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` planned
 
 ## Phase 4 — Real publishing integrations
 
-- [ ] YouTube Data API — upload Shorts, set title/description/tags.
-- [ ] Instagram Graph API — publish Reels.
-- [ ] TikTok Content Posting API — publish videos.
+- [~] **YouTube** — real OAuth 2.0 + resumable Shorts upload, wired from the Clip
+      Editor. Code-complete; **gated on your Google OAuth app** (client id/secret
+      + verification). See `BACKEND.md`.
+- [ ] **Instagram** Graph API (Reels) and **TikTok** Content Posting API —
+      scaffolded and gated (`501`) until each has an *approved* developer app
+      (business account + review, typically weeks). The approval is the blocker,
+      not the code.
 - [ ] OAuth connection manager for multiple accounts per platform.
 - [ ] Server-side scheduler/worker that actually posts at the scheduled time,
       with retries and failure surfacing.

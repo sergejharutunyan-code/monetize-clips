@@ -1,4 +1,5 @@
 import { useStore } from '../store'
+import { AccountSync } from './AccountSync'
 
 export function Playbook() {
   const { resetDemo, clearAll, clips } = useStore()
@@ -95,6 +96,10 @@ export function Playbook() {
             Clear all data
           </button>
         </div>
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <AccountSync />
       </div>
     </>
   )

@@ -11,6 +11,8 @@ interface StoreValue {
   addConcept: (concept: TwoPartConcept, opts?: { durationSec?: number }) => string[]
   updateClip: (id: string, patch: Partial<Clip>) => void
   removeClip: (id: string) => void
+  /** Replace the entire clip set (used by cloud pull). */
+  replaceAll: (clips: Clip[]) => void
   resetDemo: () => void
   clearAll: () => void
 }
@@ -82,6 +84,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setClips((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)))
       },
       removeClip: (id) => setClips((prev) => prev.filter((c) => c.id !== id)),
+      replaceAll: (next) => setClips(next),
       resetDemo: () => setClips(seedClips()),
       clearAll: () => setClips([]),
     }),

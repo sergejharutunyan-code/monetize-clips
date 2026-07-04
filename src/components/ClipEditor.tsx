@@ -4,6 +4,7 @@ import { NICHES } from '../data'
 import { fmtDuration } from '../utils'
 import type { AspectRatio } from '../types'
 import { TARGET_DIMS, drawFrame, recordClip, extForMime, type RenderParams } from '../clipeditor'
+import { loadBackend, youtubeStatus, youtubeConnectUrl, publishYouTube } from '../backend/api'
 
 const RATIOS: AspectRatio[] = ['9:16', '1:1', '16:9']
 
@@ -35,6 +36,9 @@ export function ClipEditor() {
   const [title, setTitle] = useState('')
   const [niche, setNiche] = useState<string>(NICHES[0])
   const [saved, setSaved] = useState(false)
+  const [pubBusy, setPubBusy] = useState(false)
+  const [pubMsg, setPubMsg] = useState<string | null>(null)
+  const [pubPrivacy, setPubPrivacy] = useState('private')
 
   // Keep the render params current for the preview + export loops.
   useEffect(() => {
@@ -167,6 +171,37 @@ export function ClipEditor() {
       videoUrl: result.url,
     })
     setSaved(true)
+  }
+
+  const publish = async () => {
+    if (!result) return
+    const b = loadBackend()
+    if (!b.apiUrl || !b.token) {
+      setPubMsg('Connect a backend in Playbook → Account & Sync to publish.')
+      return
+    }
+    setPubBusy(true)
+    setPubMsg(null)
+    try {
+      const st = await youtubeStatus(b.apiUrl, b.token)
+      if (!st.configured) {
+        setPubMsg('The backend has no YouTube app configured (set GOOGLE_* — see BACKEND.md).')
+        return
+      }
+      if (!st.connected) {
+        const url = await youtubeConnectUrl(b.apiUrl, b.token)
+        window.open(url, '_blank', 'noopener')
+        setPubMsg('Opened YouTube authorization — approve it, then click Publish again.')
+        return
+      }
+      const blob = await (await fetch(result.url)).blob()
+      const r = await publishYouTube(b.apiUrl, b.token, blob, { title: title.trim() || 'Clip', privacy: pubPrivacy })
+      setPubMsg(r.url ? `Published as ${pubPrivacy}: ${r.url}` : 'Published to YouTube.')
+    } catch (e) {
+      setPubMsg(e instanceof Error ? e.message : 'Publish failed.')
+    } finally {
+      setPubBusy(false)
+    }
   }
 
   const trimLen = Math.max(0, (end || duration) - start)
@@ -320,6 +355,25 @@ export function ClipEditor() {
                 </div>
                 <div className="muted" style={{ fontSize: 11.5, marginTop: 8 }}>
                   Download to keep the file. Added-to-Library clips play this session; re-attach the downloaded file (or a hosted URL) to keep them after reload.
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--border)', marginTop: 14, paddingTop: 14 }}>
+                  <div className="field-label">Publish to YouTube</div>
+                  <div className="row wrap" style={{ gap: 8 }}>
+                    <select value={pubPrivacy} onChange={(e) => setPubPrivacy(e.target.value)}
+                      style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--page)', color: 'var(--text-primary)', fontSize: 13, fontFamily: 'inherit' }}>
+                      <option value="private">Private</option>
+                      <option value="unlisted">Unlisted</option>
+                      <option value="public">Public</option>
+                    </select>
+                    <button className="btn" onClick={publish} disabled={pubBusy}>
+                      {pubBusy ? 'Publishing…' : '▶ Publish as Short'}
+                    </button>
+                  </div>
+                  {pubMsg && <div className="callout info" style={{ marginTop: 10 }}>{pubMsg}</div>}
+                  <div className="muted" style={{ fontSize: 11.5, marginTop: 8 }}>
+                    Requires a connected backend with a YouTube app configured (Playbook → Account &amp; Sync; setup in BACKEND.md).
+                  </div>
                 </div>
               </div>
             )}
