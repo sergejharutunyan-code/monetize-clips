@@ -29,6 +29,8 @@ export function ClipEditor() {
   const [zoom, setZoom] = useState(1)
   const [captionOn, setCaptionOn] = useState(true)
   const [caption, setCaption] = useState('')
+  const [credit, setCredit] = useState('')
+  const [urlDraft, setUrlDraft] = useState('')
   const [exporting, setExporting] = useState(false)
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -49,8 +51,9 @@ export function ClipEditor() {
       focusX,
       zoom,
       caption: captionOn && caption.trim() ? caption.trim() : undefined,
+      credit: credit.trim() || undefined,
     }
-  }, [start, end, duration, ratio, focusX, zoom, captionOn, caption])
+  }, [start, end, duration, ratio, focusX, zoom, captionOn, caption, credit])
 
   // Continuous WYSIWYG preview: draw the current (cropped, reframed) frame.
   useEffect(() => {
@@ -90,6 +93,18 @@ export function ClipEditor() {
     setSrcName(file.name)
     setTitle(`Clip from ${file.name.replace(/\.[^.]+$/, '')}`)
     setSrcUrl(URL.createObjectURL(file))
+  }
+
+  const onLoadUrl = () => {
+    const u = urlDraft.trim()
+    if (!u) return
+    if (srcUrl) URL.revokeObjectURL(srcUrl) // no-op for a non-blob URL
+    setResult(null)
+    setSaved(false)
+    setError(null)
+    setSrcName(u)
+    setTitle('Clip from source')
+    setSrcUrl(u)
   }
 
   const onMeta = () => {
@@ -159,10 +174,11 @@ export function ClipEditor() {
     addClip({
       title: title.trim() || `Clip from ${srcName}`,
       sourceTitle: srcName,
-      sourceCreator: '',
-      rights: 'owned',
+      sourceCreator: credit.trim(),
+      // A credit means it's someone else's source — flag rights for review, don't assume clearance.
+      rights: credit.trim() ? 'unverified' : 'owned',
       hook: captionOn ? caption.trim() : '',
-      caption: '',
+      caption: credit.trim() ? `Credit: ${credit.trim()}` : '',
       hashtags: [],
       niche,
       durationSec: Math.max(1, Math.round((end || duration) - start)),
@@ -222,13 +238,23 @@ export function ClipEditor() {
           <div className="empty" style={{ padding: '48px 20px' }}>
             <div style={{ fontSize: 40, marginBottom: 10 }}>✂️</div>
             <div style={{ fontWeight: 650, fontSize: 16, marginBottom: 6 }}>Load a source video to start</div>
-            <p className="muted" style={{ fontSize: 13.5, maxWidth: 420, margin: '0 auto 16px' }}>
-              Pick a long-form video file. Everything happens locally — nothing is uploaded to a server.
+            <p className="muted" style={{ fontSize: 13.5, maxWidth: 460, margin: '0 auto 16px' }}>
+              Use a video you <strong>own, licensed, or have permission for</strong>. Upload a file, or paste a
+              direct video URL you host. Everything happens locally — nothing is uploaded to a server.
             </p>
             <label className="btn primary" style={{ cursor: 'pointer' }}>
               ⬆ Choose a video file
               <input type="file" accept="video/*" style={{ display: 'none' }} onChange={(e) => onFile(e.target.files?.[0])} />
             </label>
+            <div className="row" style={{ gap: 6, maxWidth: 460, margin: '14px auto 0' }}>
+              <input className="player-input" value={urlDraft} onChange={(e) => setUrlDraft(e.target.value)}
+                placeholder="https://…/source.mp4" onKeyDown={(e) => { if (e.key === 'Enter') onLoadUrl() }} />
+              <button className="btn" onClick={onLoadUrl}>Load URL</button>
+            </div>
+            <div className="callout" style={{ maxWidth: 460, margin: '14px auto 0', textAlign: 'left' }}>
+              Crediting a creator isn’t the same as permission. Don’t clip others’ videos (YouTube, etc.) without
+              rights — reposting them, even credited, risks takedowns and bans.
+            </div>
           </div>
         </div>
       ) : (
@@ -242,7 +268,9 @@ export function ClipEditor() {
               src={srcUrl}
               muted
               playsInline
+              crossOrigin="anonymous"
               onLoadedMetadata={onMeta}
+              onError={() => setError('Couldn’t load that video URL. Use a direct, CORS-enabled video file (e.g. an .mp4 you host or have licensed) — page links like YouTube won’t load.')}
               style={{ display: 'none' }}
             />
             <div className="row between" style={{ marginTop: 12, gap: 10 }}>
@@ -263,10 +291,15 @@ export function ClipEditor() {
                 {fmtDuration(Math.round(cur))} / {fmtDuration(Math.round(duration))}
               </span>
             </div>
-            <label className="btn ghost sm" style={{ marginTop: 10, cursor: 'pointer' }}>
-              ↻ Replace source
-              <input type="file" accept="video/*" style={{ display: 'none' }} onChange={(e) => onFile(e.target.files?.[0])} />
-            </label>
+            <div className="row wrap" style={{ gap: 6, marginTop: 10 }}>
+              <label className="btn ghost sm" style={{ cursor: 'pointer' }}>
+                ↻ Replace (file)
+                <input type="file" accept="video/*" style={{ display: 'none' }} onChange={(e) => onFile(e.target.files?.[0])} />
+              </label>
+              <input className="player-input" value={urlDraft} onChange={(e) => setUrlDraft(e.target.value)}
+                placeholder="…or a direct video URL" onKeyDown={(e) => { if (e.key === 'Enter') onLoadUrl() }} style={{ flex: 1 }} />
+              <button className="btn sm" onClick={onLoadUrl}>Load URL</button>
+            </div>
           </div>
 
           <div className="stack" style={{ gap: 16 }}>
@@ -313,6 +346,11 @@ export function ClipEditor() {
               {captionOn && (
                 <input className="player-input" style={{ width: '100%' }} value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="On-screen hook text…" />
               )}
+              <div className="field-label" style={{ margin: '12px 0 6px' }}>Credit / attribution</div>
+              <input className="player-input" style={{ width: '100%' }} value={credit} onChange={(e) => setCredit(e.target.value)} placeholder="e.g. @originalcreator (burned small at the bottom)" />
+              <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>
+                For content you have rights to. Credit is courtesy, not a licence.
+              </div>
             </div>
 
             {!result ? (
