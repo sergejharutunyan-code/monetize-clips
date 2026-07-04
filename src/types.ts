@@ -55,6 +55,12 @@ export interface SourceVideo {
   /** Short human note on why it could clip well. */
   why: string
   thumbGlyph: string
+  /** Real thumbnail URL, when the source provides one (e.g. YouTube). */
+  thumbUrl?: string
+  /** Real view count from a live source. Undefined for examples. */
+  views?: number
+  /** ISO publish date from a live source. Undefined for examples. */
+  publishedAt?: string
 }
 
 /** One half of an AI-generated two-part clip concept. */

@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { SourceVideo, TwoPartConcept, ConceptPart } from '../types'
-import { seedDiscovery } from '../discovery'
 import { NICHES, PLATFORM_META, uid } from '../data'
+import { fmtNum, fmtDate } from '../utils'
 import { useStore } from '../store'
 import {
   analyzeVideo,
@@ -9,11 +9,22 @@ import {
   saveAISettings,
   type AIProvider,
 } from '../ai'
+import {
+  getTrending,
+  loadTrendingSettings,
+  saveTrendingSettings,
+  YT_CATEGORIES,
+  type TrendingSettings,
+} from '../trending'
 
 export function Discover() {
-  const [feed, setFeed] = useState<SourceVideo[]>(() => seedDiscovery())
+  const [feed, setFeed] = useState<SourceVideo[]>([])
+  const [loading, setLoading] = useState(true)
+  const [live, setLive] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
   const [active, setActive] = useState<SourceVideo | null>(null)
   const [settings, setSettings] = useState(() => loadAISettings())
+  const [trend, setTrend] = useState<TrendingSettings>(() => loadTrendingSettings())
 
   const setProvider = (provider: AIProvider) => {
     const next = { ...settings, provider }
@@ -26,15 +37,96 @@ export function Discover() {
     saveAISettings(next)
   }
 
+  const setTrendField = (patch: Partial<TrendingSettings>) => {
+    const next = { ...trend, ...patch }
+    setTrend(next)
+    saveTrendingSettings(next)
+  }
+
+  const loadFeed = async (s: TrendingSettings) => {
+    setLoading(true)
+    setNote(null)
+    const res = await getTrending(s)
+    setFeed(res.videos)
+    setLive(res.live)
+    setNote(res.note ?? null)
+    setLoading(false)
+  }
+
+  // Load once on mount using saved settings.
+  useEffect(() => {
+    void loadFeed(loadTrendingSettings())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const addToFeed = (v: SourceVideo) => setFeed((f) => [v, ...f])
+
   return (
     <>
       <div className="page-head">
         <div>
           <h1 className="page-title">Discover</h1>
           <p className="page-desc">
-            Start from an example or paste your own video, then let AI break it into a two-part clip series — a hook and its payoff — ready to drop into your pipeline.
+            Pull live trending videos or paste your own, then let AI break each into a two-part clip series — a hook and its payoff — ready to drop into your pipeline.
           </p>
         </div>
+      </div>
+
+      <div className="card card-pad" style={{ marginBottom: 16 }}>
+        <div className="card-head">
+          <h3 className="card-title">Trending source</h3>
+          <span className="card-hint">where clips come from</span>
+        </div>
+        <div className="row wrap" style={{ gap: 16, alignItems: 'flex-end' }}>
+          <div>
+            <div className="segmented">
+              <button className={trend.provider === 'sample' ? 'on' : ''} onClick={() => setTrendField({ provider: 'sample' })}>
+                Examples
+              </button>
+              <button className={trend.provider === 'youtube' ? 'on' : ''} onClick={() => setTrendField({ provider: 'youtube' })}>
+                YouTube trending
+              </button>
+            </div>
+            <div className="card-hint" style={{ marginTop: 6 }}>
+              {trend.provider === 'sample'
+                ? 'Built-in example sources — good for trying the workshop.'
+                : 'Live “most popular” videos from the YouTube Data API (your key).'}
+            </div>
+          </div>
+          {trend.provider === 'youtube' && (
+            <>
+              <div className="field" style={{ marginBottom: 0, flex: '2 1 220px' }}>
+                <label>YouTube Data API key</label>
+                <input
+                  value={trend.youtubeApiKey}
+                  onChange={(e) => setTrendField({ youtubeApiKey: e.target.value })}
+                  placeholder="AIza…"
+                  type="password"
+                />
+              </div>
+              <div className="field" style={{ marginBottom: 0, flex: '0 1 90px' }}>
+                <label>Region</label>
+                <input value={trend.region} onChange={(e) => setTrendField({ region: e.target.value })} placeholder="US" />
+              </div>
+              <div className="field" style={{ marginBottom: 0, flex: '0 1 160px' }}>
+                <label>Category</label>
+                <select value={trend.categoryId} onChange={(e) => setTrendField({ categoryId: e.target.value })}>
+                  {YT_CATEGORIES.map((c) => (
+                    <option key={c.id} value={c.id}>{c.label}</option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+          <button className="btn" onClick={() => loadFeed(trend)} disabled={loading}>
+            {loading ? 'Loading…' : '↻ Load trending'}
+          </button>
+        </div>
+        {trend.provider === 'youtube' && (
+          <div className="callout info" style={{ marginTop: 14 }}>
+            Get a free key in Google Cloud (enable “YouTube Data API v3”). Restrict it by HTTP referrer to your site. It’s stored only in this browser — never committed.
+          </div>
+        )}
       </div>
 
       <div className="card card-pad" style={{ marginBottom: 16 }}>
@@ -78,18 +170,28 @@ export function Discover() {
         )}
       </div>
 
-      <AddByUrl onAdd={(v) => setFeed((f) => [v, ...f])} onWorkshop={setActive} />
+      <AddByUrl onAdd={addToFeed} onWorkshop={setActive} />
 
       <div className="card card-pad">
         <div className="card-head">
-          <h3 className="card-title">Example sources</h3>
-          <span className="card-hint">starting points to workshop</span>
+          <h3 className="card-title">
+            {live ? 'Trending on YouTube' : 'Example sources'}
+            {live && <span className="badge published" style={{ marginLeft: 8, fontSize: 10.5 }}>live</span>}
+          </h3>
+          <span className="card-hint">{loading ? 'loading…' : `${feed.length} videos`}</span>
         </div>
-        <div className="grid grid-3">
-          {feed.map((v) => (
-            <VideoCard key={v.id} video={v} onWorkshop={() => setActive(v)} />
-          ))}
-        </div>
+        {note && <div className="callout" style={{ marginBottom: 14 }}>{note}</div>}
+        {loading ? (
+          <div className="empty">Loading trending videos…</div>
+        ) : feed.length === 0 ? (
+          <div className="empty">No videos. Adjust the source above or paste a video.</div>
+        ) : (
+          <div className="grid grid-3">
+            {feed.map((v) => (
+              <VideoCard key={v.id} video={v} onWorkshop={() => setActive(v)} />
+            ))}
+          </div>
+        )}
       </div>
 
       {active && <WorkshopModal video={active} onClose={() => setActive(null)} />}
@@ -100,19 +202,32 @@ export function Discover() {
 function VideoCard({ video, onWorkshop }: { video: SourceVideo; onWorkshop: () => void }) {
   return (
     <div style={{ background: 'var(--page)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ padding: '14px 14px 0', fontSize: 30 }}>{video.thumbGlyph}</div>
-      <div style={{ padding: '8px 14px 14px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+      {video.thumbUrl ? (
+        <div style={{ aspectRatio: '16 / 9', background: '#000', overflow: 'hidden' }}>
+          <img src={video.thumbUrl} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        </div>
+      ) : (
+        <div style={{ padding: '14px 14px 0', fontSize: 30 }}>{video.thumbGlyph}</div>
+      )}
+      <div style={{ padding: '10px 14px 14px', flex: 1, display: 'flex', flexDirection: 'column' }}>
         <div className="clip-title" style={{ fontSize: 14, lineHeight: 1.3 }}>{video.title}</div>
         <div className="clip-source" style={{ marginTop: 4 }}>
           {PLATFORM_META[video.origin].label} · {video.creator}
         </div>
-        <div className="row" style={{ gap: 8, margin: '10px 0' }}>
+        <div className="row wrap" style={{ gap: 6, margin: '10px 0' }}>
           <span className="badge">{video.niche}</span>
+          {video.views !== undefined && <span className="badge">{fmtNum(video.views)} views</span>}
+          {video.publishedAt && <span className="badge">{fmtDate(video.publishedAt)}</span>}
         </div>
         <div className="muted" style={{ fontSize: 12.5, flex: 1 }}>{video.why}</div>
-        <button className="btn primary sm" style={{ marginTop: 12, justifyContent: 'center' }} onClick={onWorkshop}>
-          ✎ Workshop into clips
-        </button>
+        <div className="row" style={{ gap: 6, marginTop: 12 }}>
+          <button className="btn primary sm" style={{ flex: 1, justifyContent: 'center' }} onClick={onWorkshop}>
+            ✎ Workshop into clips
+          </button>
+          {video.url && (
+            <a className="btn sm" href={video.url} target="_blank" rel="noreferrer" title="Open the source video">↗</a>
+          )}
+        </div>
       </div>
     </div>
   )
