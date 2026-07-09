@@ -1,0 +1,45 @@
+# Render Blueprint — deploy the ClipForge backend with one click.
+# In Render: New → Blueprint → connect this repo. Render reads this file,
+# builds server/Dockerfile, and prompts for the secret env vars marked below.
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: clipforge-backend
+    runtime: docker
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: ./server
+    plan: free # free web service (spins down when idle; SQLite resets on redeploy)
+    healthCheckPath: /health
+    autoDeploy: false
+    envVars:
+      # Signs OAuth state — Render generates a strong random value for you.
+      - key: CLIPFORGE_SECRET
+        generateValue: true
+      # SQLite location. On the free plan there is no persistent disk, so this
+      # lives on ephemeral storage and resets on each deploy/spin-down. For
+      # durable accounts + clips, switch `plan` to `starter` and uncomment the
+      # `disk:` block below (a persistent disk requires a paid instance).
+      - key: CLIPFORGE_DB
+        value: /app/data/clipforge.db
+      # Your published frontend origin (CORS) and full app URL (OAuth bounce-back).
+      - key: CLIPFORGE_ALLOW_ORIGIN
+        value: https://sergejharutunyan-code.github.io
+      - key: CLIPFORGE_APP_URL
+        value: https://sergejharutunyan-code.github.io/monetize-clips
+      # Secrets — set these in the Render dashboard; never commit real values.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      # Must be https://<this-service>.onrender.com/api/oauth/youtube/callback
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+    # Uncomment with `plan: starter` for a persistent SQLite database:
+    # disk:
+    #   name: clipforge-data
+    #   mountPath: /app/data
+    #   sizeGB: 1

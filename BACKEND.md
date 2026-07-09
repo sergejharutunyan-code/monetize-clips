@@ -18,7 +18,32 @@ npm start                 # http://localhost:8787  (uses --experimental-sqlite)
 
 `GET /health` reports what's configured.
 
-## Deploy (any Docker host — Render/Fly/Railway have free tiers)
+## Deploy to Render (one click, no terminal — works from a phone)
+
+The repo ships a **[`render.yaml`](./render.yaml) blueprint**, so you can deploy
+the backend entirely from a browser:
+
+1. Sign in at **[render.com](https://render.com)** with GitHub.
+2. **New → Blueprint** → pick `sergejharutunyan-code/monetize-clips`. Render reads
+   `render.yaml`, builds `server/Dockerfile`, and generates `CLIPFORGE_SECRET`.
+3. When prompted, paste the secret env vars you have (all optional to boot —
+   `ANTHROPIC_API_KEY`, `YOUTUBE_API_KEY`, and the three `GOOGLE_*` for
+   publishing). You can add them later in the service's **Environment** tab.
+4. Deploy. Your backend is at `https://clipforge-backend-XXXX.onrender.com` —
+   open `/health` to confirm what's configured.
+5. Set `GOOGLE_REDIRECT_URI` to `https://<that-host>/api/oauth/youtube/callback`
+   (and add the same URL to your Google OAuth client — see below).
+6. In the app: **Playbook → Account & Sync**, paste the backend URL, create an
+   account. **Discover → Claude API** and **Clip Editor → Publish to YouTube**
+   now use it.
+
+> **Free plan caveats (honest):** the service spins down after ~15 min idle (first
+> request after that is slow to wake), and there's **no persistent disk**, so the
+> SQLite DB — accounts, synced clips, YouTube connection — resets on each deploy or
+> spin-down. For durable data, switch `plan: free` → `starter` in `render.yaml` and
+> uncomment the `disk:` block (a persistent disk needs a paid instance).
+
+## Deploy anywhere else (any Docker host — Fly/Railway/a VPS)
 
 ```bash
 docker build -t clipforge-server ./server
