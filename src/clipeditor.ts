@@ -9,8 +9,6 @@ export interface RenderParams {
   /** Extra zoom on top of cover-fit, >= 1. */
   zoom: number
   caption?: string
-  /** Attribution burned small at the bottom, e.g. "via @creator". */
-  credit?: string
 }
 
 export const TARGET_DIMS: Record<AspectRatio, { w: number; h: number }> = {
@@ -37,21 +35,6 @@ export function drawFrame(ctx: CanvasRenderingContext2D, video: HTMLVideoElement
     ctx.drawImage(video, dx, dy, dw, dh)
   }
   if (p.caption) drawCaption(ctx, p.caption, TW, TH)
-  if (p.credit) drawCredit(ctx, p.credit, TW, TH)
-}
-
-function drawCredit(ctx: CanvasRenderingContext2D, credit: string, TW: number, TH: number) {
-  const text = /^via\b/i.test(credit) ? credit : `via ${credit}`
-  const fontSize = Math.round(TW * 0.033)
-  ctx.font = `600 ${fontSize}px system-ui, -apple-system, "Segoe UI", sans-serif`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'alphabetic'
-  ctx.lineWidth = Math.max(2, fontSize * 0.16)
-  ctx.strokeStyle = 'rgba(0,0,0,0.85)'
-  ctx.fillStyle = 'rgba(255,255,255,0.92)'
-  const y = TH - Math.round(TH * 0.022)
-  ctx.strokeText(text, TW / 2, y)
-  ctx.fillText(text, TW / 2, y)
 }
 
 function drawCaption(ctx: CanvasRenderingContext2D, text: string, TW: number, TH: number) {

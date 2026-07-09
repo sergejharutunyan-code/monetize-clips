@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store'
 import { NICHES } from '../data'
 import { fmtDuration } from '../utils'
-import type { AspectRatio } from '../types'
+import type { AspectRatio, Clip } from '../types'
 import { TARGET_DIMS, drawFrame, recordClip, extForMime, type RenderParams } from '../clipeditor'
 import { loadBackend, youtubeStatus, youtubeConnectUrl, publishYouTube } from '../backend/api'
 
@@ -29,7 +29,7 @@ export function ClipEditor() {
   const [zoom, setZoom] = useState(1)
   const [captionOn, setCaptionOn] = useState(true)
   const [caption, setCaption] = useState('')
-  const [credit, setCredit] = useState('')
+  const [rights, setRights] = useState<Clip['rights']>('unverified')
   const [urlDraft, setUrlDraft] = useState('')
   const [exporting, setExporting] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -51,9 +51,8 @@ export function ClipEditor() {
       focusX,
       zoom,
       caption: captionOn && caption.trim() ? caption.trim() : undefined,
-      credit: credit.trim() || undefined,
     }
-  }, [start, end, duration, ratio, focusX, zoom, captionOn, caption, credit])
+  }, [start, end, duration, ratio, focusX, zoom, captionOn, caption])
 
   // Continuous WYSIWYG preview: draw the current (cropped, reframed) frame.
   useEffect(() => {
@@ -174,11 +173,10 @@ export function ClipEditor() {
     addClip({
       title: title.trim() || `Clip from ${srcName}`,
       sourceTitle: srcName,
-      sourceCreator: credit.trim(),
-      // A credit means it's someone else's source — flag rights for review, don't assume clearance.
-      rights: credit.trim() ? 'unverified' : 'owned',
+      sourceCreator: '',
+      rights,
       hook: captionOn ? caption.trim() : '',
-      caption: credit.trim() ? `Credit: ${credit.trim()}` : '',
+      caption: '',
       hashtags: [],
       niche,
       durationSec: Math.max(1, Math.round((end || duration) - start)),
@@ -252,8 +250,8 @@ export function ClipEditor() {
               <button className="btn" onClick={onLoadUrl}>Load URL</button>
             </div>
             <div className="callout" style={{ maxWidth: 460, margin: '14px auto 0', textAlign: 'left' }}>
-              Crediting a creator isn’t the same as permission. Don’t clip others’ videos (YouTube, etc.) without
-              rights — reposting them, even credited, risks takedowns and bans.
+              Don’t clip others’ videos (YouTube, etc.) without rights — reposting them risks takedowns and bans.
+              Use footage you own, licensed, or have permission for, and transform it (your edit, commentary).
             </div>
           </div>
         </div>
@@ -346,11 +344,6 @@ export function ClipEditor() {
               {captionOn && (
                 <input className="player-input" style={{ width: '100%' }} value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="On-screen hook text…" />
               )}
-              <div className="field-label" style={{ margin: '12px 0 6px' }}>Credit / attribution</div>
-              <input className="player-input" style={{ width: '100%' }} value={credit} onChange={(e) => setCredit(e.target.value)} placeholder="e.g. @originalcreator (burned small at the bottom)" />
-              <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>
-                For content you have rights to. Credit is courtesy, not a licence.
-              </div>
             </div>
 
             {!result ? (
@@ -376,11 +369,22 @@ export function ClipEditor() {
                   <label>Title</label>
                   <input value={title} onChange={(e) => setTitle(e.target.value)} />
                 </div>
-                <div className="field" style={{ marginBottom: 12 }}>
-                  <label>Niche</label>
-                  <select value={niche} onChange={(e) => setNiche(e.target.value)}>
-                    {NICHES.map((n) => <option key={n} value={n}>{n}</option>)}
-                  </select>
+                <div className="field-row" style={{ marginBottom: 12 }}>
+                  <div className="field" style={{ marginBottom: 0 }}>
+                    <label>Niche</label>
+                    <select value={niche} onChange={(e) => setNiche(e.target.value)}>
+                      {NICHES.map((n) => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                  </div>
+                  <div className="field" style={{ marginBottom: 0 }}>
+                    <label>Rights</label>
+                    <select value={rights} onChange={(e) => setRights(e.target.value as Clip['rights'])}>
+                      <option value="owned">Owned</option>
+                      <option value="licensed">Licensed</option>
+                      <option value="permission">Permission</option>
+                      <option value="unverified">Unverified</option>
+                    </select>
+                  </div>
                 </div>
                 <div className="row wrap" style={{ gap: 8 }}>
                   <a className="btn" href={result.url} download={`clip.${result.ext}`}>⬇ Download</a>
