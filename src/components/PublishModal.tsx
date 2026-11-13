@@ -257,7 +257,7 @@ export function PublishModal({ clipId, onClose, onOpenAccounts }: { clipId: stri
   const share = async () => {
     if (!file) return
     void copyText(caption)
-    const r = await shareFile(file, caption)
+    const r = await shareFile(file)
     setManualMsg(
       r === 'shared' ? 'Shared. The caption is on your clipboard — paste it in the app, then mark the post below once it is up.'
         : r === 'failed' ? 'This device would not open the share sheet for this file. Use Download instead.' : null,

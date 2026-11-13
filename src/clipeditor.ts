@@ -247,11 +247,6 @@ export interface ExportResult {
   thumb?: string
 }
 
-type FrameVideo = HTMLVideoElement & {
-  requestVideoFrameCallback?: (cb: () => void) => number
-  cancelVideoFrameCallback?: (id: number) => void
-}
-
 /**
  * Render the trimmed, reframed segment to a real video file by drawing frames to
  * a canvas and recording canvas + audio in real time.
@@ -274,7 +269,16 @@ export async function recordClip(
   // Must happen inside the click that started the export (autoplay rules).
   const audio = captureAudioTracks(video)
 
+  // Phones only let an unmuted video start from a tap. Starting it right here,
+  // still inside that tap, clears this element to be started again after the
+  // (asynchronous) seek below. Kept inaudible; a stuck source cannot hang it.
+  const graph = graphs.get(video)
+  const heard = graph ? graph.monitor.gain.value : 1
+  if (graph) graph.monitor.gain.value = 0
+  await Promise.race([video.play().catch(() => {}), new Promise((r) => setTimeout(r, 3000))])
   video.pause()
+  if (graph) graph.monitor.gain.value = heard
+
   await seek(video, p.startSec)
   drawFrame(ctx, video, p)
   const thumb = makeThumb(canvas)
@@ -305,10 +309,8 @@ export async function recordClip(
     rec.onerror = () => reject(new Error('The recorder stopped unexpectedly.'))
   })
 
-  const v = video as FrameVideo
   const span = Math.max(0.1, p.endSec - p.startSec)
   let raf = 0
-  let vfc = 0
   let finished = false
   let cancelled = false
 
@@ -316,7 +318,6 @@ export async function recordClip(
     if (finished) return
     finished = true
     cancelAnimationFrame(raf)
-    if (vfc && v.cancelVideoFrameCallback) v.cancelVideoFrameCallback(vfc)
     clearInterval(watchdog)
     clearTimeout(guard)
     signal?.removeEventListener('abort', onAbort)
@@ -330,13 +331,11 @@ export async function recordClip(
     onProgress?.(clamp((video.currentTime - p.startSec) / span, 0, 1))
     if (atEnd()) finish()
   }
-  // Draw once per decoded video frame where the browser can tell us; otherwise
-  // once per display frame.
+  // One draw per display frame — the same loop the live preview runs on, so
+  // what you saw while editing is what gets recorded.
   const loop = () => {
     paint()
-    if (finished) return
-    if (v.requestVideoFrameCallback) vfc = v.requestVideoFrameCallback(loop)
-    else raf = requestAnimationFrame(loop)
+    if (!finished) raf = requestAnimationFrame(loop)
   }
   // Timers keep firing when frames do not (end of file, hidden tab).
   const watchdog = setInterval(() => {

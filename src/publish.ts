@@ -170,10 +170,14 @@ export function canShareFile(file: File | null): boolean {
   }
 }
 
-/** Open the device share sheet with the clip attached. Call directly from a tap. */
-export async function shareFile(file: File, text: string): Promise<'shared' | 'cancelled' | 'failed'> {
+/**
+ * Open the device share sheet with the clip attached. Call directly from a tap.
+ * Only the file is shared: adding text makes it a mixed share, which hides apps
+ * that accept video only (Instagram, TikTok) on some phones. Copy the caption instead.
+ */
+export async function shareFile(file: File): Promise<'shared' | 'cancelled' | 'failed'> {
   try {
-    await navigator.share({ files: [file], text })
+    await navigator.share({ files: [file] })
     return 'shared'
   } catch (e) {
     return e instanceof DOMException && e.name === 'AbortError' ? 'cancelled' : 'failed'

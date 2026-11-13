@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { getConnections, isSignedIn, loadBackend, onBackendChange, type BackendSettings, type ConnectionsInfo } from './api'
+import { ApiError, getConnections, isSignedIn, loadBackend, onBackendChange, type BackendSettings, type ConnectionsInfo } from './api'
 
 /** The saved backend settings, kept in step with sign-in/out anywhere in the app. */
 export function useBackend(): BackendSettings {
@@ -41,7 +41,11 @@ export function useConnections(): ConnectionsState {
       .catch((e: unknown) => {
         if (mine !== seq.current) return
         setInfo(null)
-        setError(e instanceof Error ? e.message : 'Could not load connections.')
+        setError(
+          e instanceof ApiError && e.status === 404
+            ? 'This backend is running an older version that cannot publish to all three platforms. Redeploy it from the latest code (on Render: sync the blueprint, then deploy).'
+            : e instanceof Error ? e.message : 'Could not load connections.',
+        )
       })
       .finally(() => {
         if (mine === seq.current) setLoading(false)
