@@ -1,5 +1,5 @@
 import crypto from 'node:crypto'
-import { db } from './db.mjs'
+import { db, appSecret } from './db.mjs'
 
 export function genId(prefix = 'u') {
   return `${prefix}_${crypto.randomBytes(9).toString('base64url')}`
@@ -57,20 +57,22 @@ export function requireAuth(req, res, next) {
 
 /** Signed state for OAuth round-trips (survives the redirect without a cookie). */
 export function signState(payload) {
-  const secret = process.env.CLIPFORGE_SECRET || 'dev-secret-change-me'
-  const body = Buffer.from(JSON.stringify(payload)).toString('base64url')
-  const sig = crypto.createHmac('sha256', secret).update(body).digest('base64url')
+  const body = Buffer.from(JSON.stringify({ ...payload, t: Date.now() })).toString('base64url')
+  const sig = crypto.createHmac('sha256', appSecret()).update(body).digest('base64url')
   return `${body}.${sig}`
 }
 
+const STATE_TTL_MS = 30 * 60 * 1000
+
 export function verifyState(state) {
   try {
-    const secret = process.env.CLIPFORGE_SECRET || 'dev-secret-change-me'
     const [body, sig] = String(state).split('.')
-    const expected = crypto.createHmac('sha256', secret).update(body).digest('base64url')
+    const expected = crypto.createHmac('sha256', appSecret()).update(body).digest('base64url')
     if (!sig || sig.length !== expected.length) return null
     if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null
-    return JSON.parse(Buffer.from(body, 'base64url').toString())
+    const payload = JSON.parse(Buffer.from(body, 'base64url').toString())
+    if (!payload.t || Date.now() - payload.t > STATE_TTL_MS) return null
+    return payload
   } catch {
     return null
   }

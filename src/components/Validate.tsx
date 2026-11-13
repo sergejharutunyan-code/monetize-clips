@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../store'
-import { PLATFORM_META, PLATFORMS } from '../data'
 import { fmtDuration } from '../utils'
 import type { Clip } from '../types'
 import { ClipPlayer } from './ClipPlayer'
+import { hasVideo } from '../media'
+import { PlatformDots } from './bits'
 
 export function Validate() {
   const { clips } = useStore()
@@ -69,7 +70,7 @@ function ClipTile({ clip, onOpen }: { clip: Clip; onOpen: () => void }) {
         {clip.validated ? (
           <span className="badge published" style={{ fontSize: 10.5 }}>✓ validated</span>
         ) : (
-          <span className="badge" style={{ fontSize: 10.5 }}>{clip.videoUrl ? 'has video' : 'no video'}</span>
+          <span className="badge" style={{ fontSize: 10.5 }}>{hasVideo(clip) ? 'has video' : 'no video'}</span>
         )}
       </div>
       <div className="clip-title" style={{ fontSize: 14, lineHeight: 1.3 }}>{clip.title}</div>
@@ -80,21 +81,7 @@ function ClipTile({ clip, onOpen }: { clip: Clip; onOpen: () => void }) {
         <em>“{clip.hook}”</em>
       </div>
       <div className="row between">
-        <span className="platform-dots">
-          {PLATFORMS.map((pl) => {
-            const post = clip.posts.find((p) => p.platform === pl)!
-            return (
-              <span
-                key={pl}
-                className={`pd ${post.status !== 'not_posted' ? 'on' : ''}`}
-                style={{ background: PLATFORM_META[pl].color }}
-                title={`${PLATFORM_META[pl].label}: ${post.status.replace('_', ' ')}`}
-              >
-                {PLATFORM_META[pl].glyph}
-              </span>
-            )
-          })}
-        </span>
+        <PlatformDots posts={clip.posts} />
         <button className="btn primary sm" onClick={onOpen}>▶ Open player</button>
       </div>
     </div>

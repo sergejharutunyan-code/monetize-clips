@@ -3,12 +3,14 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "A workflow studio for the clip-and-distribute content strategy: turn viral moments into short clips and manage mass distribution across TikTok, Instagram, and YouTube.",
+  "description": "Cut long videos into short clips and publish them to TikTok, Instagram and YouTube from one app.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "app": "npm run build && npm --prefix server install && npm --prefix server start",
+    "test": "npm --prefix server test"
   },
   "dependencies": {
     "react": "^18.3.1",

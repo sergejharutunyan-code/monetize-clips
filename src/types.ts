@@ -2,7 +2,15 @@ export type Platform = 'tiktok' | 'instagram' | 'youtube'
 
 export type ClipStatus = 'idea' | 'editing' | 'ready' | 'scheduled' | 'published'
 
-export type PostStatus = 'not_posted' | 'scheduled' | 'published'
+/**
+ * Where one clip stands on one platform.
+ * - scheduled:  queued for a time (auto-posted by the backend, or a reminder to post by hand)
+ * - publishing: the backend is uploading it right now
+ * - published:  live on the platform
+ * - draft:      delivered to the platform but not live yet (e.g. TikTok inbox draft)
+ * - failed:     the last attempt did not go through (see `error`)
+ */
+export type PostStatus = 'not_posted' | 'scheduled' | 'publishing' | 'published' | 'draft' | 'failed'
 
 export type AspectRatio = '9:16' | '1:1' | '16:9'
 
@@ -14,6 +22,12 @@ export interface PlatformPost {
   publishedAt?: string // ISO datetime
   /** Link to the live post, once published. */
   url?: string
+  /** The backend publish job behind this post. Absent for posts made by hand. */
+  jobId?: string
+  /** Live progress while publishing, or a note from the platform afterwards. */
+  note?: string
+  /** Why the last attempt failed. */
+  error?: string
 }
 
 /** A short clip cut from a source video, tracked through the pipeline. */
@@ -35,8 +49,14 @@ export interface Clip {
   status: ClipStatus
   createdAt: string // ISO date
   posts: PlatformPost[]
-  /** Source of the rendered clip video: a hosted URL you can play back. */
+  /** The rendered clip as a hosted URL (your own link, or this clip on the backend). */
   videoUrl?: string
+  /** The rendered clip saved in this browser (IndexedDB key) — survives reloads on this device. */
+  localMediaId?: string
+  /** The rendered clip stored on the backend, ready to publish. */
+  mediaId?: string
+  /** Small poster frame (JPEG data URL). */
+  thumb?: string
   /** Whether the clip has been watched and passed review in the player. */
   validated?: boolean
   validatedAt?: string // ISO datetime

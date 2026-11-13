@@ -1,5 +1,4 @@
 import { useStore } from '../store'
-import { AccountSync } from './AccountSync'
 
 export function Playbook() {
   const { resetDemo, clearAll, clips } = useStore()
@@ -85,8 +84,8 @@ export function Playbook() {
           <span className="card-hint">{clips.length} clips stored locally in your browser</span>
         </div>
         <p className="muted" style={{ fontSize: 13.5, marginTop: 0 }}>
-          Everything you enter lives in this browser’s local storage — no account, no server. Export by copying from the
-          library, or reset below.
+          Your clip list and exported clip files live in this browser. Connect the backend in Accounts to post
+          automatically and to keep a copy of your clips in an account.
         </p>
         <div className="row" style={{ gap: 10 }}>
           <button className="btn" onClick={() => confirm('Reload the demo dataset? This replaces your current clips.') && resetDemo()}>
@@ -97,10 +96,6 @@ export function Playbook() {
           </button>
         </div>
       </div>
-
-      <div style={{ marginTop: 16 }}>
-        <AccountSync />
-      </div>
     </>
   )
 }
@@ -109,7 +104,7 @@ const STEPS = [
   { title: 'Source', body: 'Pull from content you own or have cleared — your own long-form, licensed footage, or a creator who gave permission.' },
   { title: 'Clip', body: 'Cut the 15–60s moment with the strongest hook. One long video yields many clips.' },
   { title: 'Package', body: 'Add captions, a hook overlay, and a payoff. Re-export vertical (9:16), watermark-free.' },
-  { title: 'Distribute', body: 'Post natively to TikTok, Instagram Reels, and YouTube Shorts. Stagger release times.' },
+  { title: 'Distribute', body: 'Publish to TikTok, Instagram Reels, and YouTube Shorts from the Publish page. Stagger release times.' },
   { title: 'Measure', body: 'Track views, retention, and payout per platform. Double down on what hits.' },
   { title: 'Compound', body: 'Feed winners back into the next batch. Consistency trains the algorithm and grows a followable identity.' },
 ]

@@ -1,22 +1,22 @@
 import { useState } from 'react'
 import { useStore } from '../store'
-import { loadBackend, saveBackend, register, login, logout, pullClips, pushClips } from '../backend/api'
+import { useBackend } from '../backend/hooks'
+import {
+  health, isSignedIn, loadBackend, saveBackend, register, login, logout, pullClips, pushClips,
+  type BackendSettings,
+} from '../backend/api'
 
 export function AccountSync() {
   const { clips, replaceAll } = useStore()
-  const [s, setS] = useState(() => loadBackend())
+  const s = useBackend()
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const loggedIn = Boolean(s.token && s.apiUrl)
-  const set = (patch: Partial<typeof s>) => {
-    const next = { ...s, ...patch }
-    setS(next)
-    saveBackend(next)
-  }
+  const loggedIn = isSignedIn(s)
+  const set = (patch: Partial<BackendSettings>) => saveBackend({ ...loadBackend(), ...patch })
 
   const run = async (fn: () => Promise<void>) => {
     setBusy(true)
@@ -38,6 +38,18 @@ export function AccountSync() {
       set({ token: res.token, email: res.user.email })
       setPassword('')
       setMsg(mode === 'register' ? 'Account created — you’re signed in.' : 'Signed in.')
+    })
+
+  const check = () =>
+    run(async () => {
+      if (!s.apiUrl.trim()) throw new Error('Enter your backend URL first.')
+      const h = await health(s.apiUrl, 75_000)
+      if (h.app !== 'clipforge' && !h.ok) throw new Error('That address did not answer like a ClipForge backend.')
+      const on = h.publish ? Object.entries(h.publish).filter(([, v]) => v).map(([k]) => k) : []
+      setMsg(
+        `Backend is up. Video conversion (ffmpeg): ${h.ffmpeg ? 'yes' : 'no'}. ` +
+          `Platforms set up: ${on.length ? on.join(', ') : 'none yet'}.`,
+      )
     })
 
   const doPull = () =>
@@ -63,18 +75,22 @@ export function AccountSync() {
   return (
     <div className="card card-pad">
       <div className="card-head">
-        <h3 className="card-title">Account &amp; Sync</h3>
-        <span className="card-hint">{loggedIn ? s.email : 'optional — needs a backend'}</span>
+        <h3 className="card-title">ClipForge backend</h3>
+        <span className="card-hint">{loggedIn ? `signed in as ${s.email}` : 'needed for automatic posting'}</span>
       </div>
 
       <p className="muted" style={{ fontSize: 13.5, marginTop: 0 }}>
-        Runs fully offline by default. Connect a ClipForge backend to keep your clips in an account and
-        sync across devices. See <code>BACKEND.md</code> to deploy one.
+        The backend stores your finished clips, converts them to MP4, and uploads them to the platforms — now or on a
+        schedule. Clip editing works without it. See <code>BACKEND.md</code> to run one.
       </p>
 
       <div className="field">
-        <label>Backend URL</label>
-        <input value={s.apiUrl} onChange={(e) => set({ apiUrl: e.target.value })} placeholder="https://your-clipforge-backend" disabled={loggedIn} />
+        <label htmlFor="backend-url">Backend URL</label>
+        <div className="row" style={{ gap: 8 }}>
+          <input id="backend-url" style={{ flex: 1, minWidth: 0 }} value={s.apiUrl} onChange={(e) => set({ apiUrl: e.target.value })}
+            placeholder="https://your-clipforge-backend" disabled={loggedIn} inputMode="url" autoCapitalize="off" />
+          <button className="btn sm" onClick={check} disabled={busy || !s.apiUrl.trim()}>Check</button>
+        </div>
       </div>
 
       {!loggedIn ? (
@@ -85,32 +101,34 @@ export function AccountSync() {
           </div>
           <div className="field-row">
             <div className="field" style={{ marginBottom: 0 }}>
-              <label>Email</label>
-              <input type="email" value={s.email} onChange={(e) => set({ email: e.target.value })} placeholder="you@example.com" />
+              <label htmlFor="backend-email">Email</label>
+              <input id="backend-email" type="email" value={s.email} onChange={(e) => set({ email: e.target.value })} placeholder="you@example.com" autoComplete="username" />
             </div>
             <div className="field" style={{ marginBottom: 0 }}>
-              <label>Password</label>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="8+ characters"
-                onKeyDown={(e) => { if (e.key === 'Enter') submit() }} />
+              <label htmlFor="backend-password">Password</label>
+              <input id="backend-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="8+ characters"
+                autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+                onKeyDown={(e) => { if (e.key === 'Enter') void submit() }} />
             </div>
           </div>
-          <button className="btn primary" style={{ marginTop: 14 }} onClick={submit} disabled={busy}>
+          <button className="btn primary" style={{ marginTop: 14 }} onClick={() => void submit()} disabled={busy}>
             {busy ? 'Working…' : mode === 'register' ? 'Create account' : 'Sign in'}
           </button>
         </>
       ) : (
         <div className="row wrap" style={{ gap: 8 }}>
-          <button className="btn" onClick={doPull} disabled={busy}>↓ Pull from cloud</button>
-          <button className="btn primary" onClick={doPush} disabled={busy}>↑ Push to cloud ({clips.length})</button>
-          <button className="btn ghost sm" onClick={signOut} disabled={busy}>Sign out</button>
+          <button className="btn" onClick={() => void doPull()} disabled={busy}>↓ Pull clips from cloud</button>
+          <button className="btn" onClick={() => void doPush()} disabled={busy}>↑ Push clips to cloud ({clips.length})</button>
+          <button className="btn ghost sm" onClick={() => void signOut()} disabled={busy}>Sign out</button>
         </div>
       )}
 
-      {msg && <div className="callout info" style={{ marginTop: 12 }}>{msg}</div>}
-      {error && <div className="callout" style={{ marginTop: 12 }}>{error}</div>}
+      {msg && <div className="callout info" style={{ marginTop: 12 }} role="status">{msg}</div>}
+      {error && <div className="callout" style={{ marginTop: 12 }} role="alert">{error}</div>}
       {loggedIn && (
         <div className="muted" style={{ fontSize: 11.5, marginTop: 10 }}>
-          Pull replaces local clips with your account’s; push replaces your account’s with local. (Simple full-set sync.)
+          Pull replaces this device’s clip list with your account’s; push replaces your account’s with this device’s. Clip
+          videos you published are kept on the backend; unpublished exports stay on the device that made them.
         </div>
       )}
     </div>

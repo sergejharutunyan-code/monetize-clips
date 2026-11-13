@@ -35,10 +35,16 @@ export function ClipModal({ existing, onClose }: { existing?: Clip; onClose: () 
 
   const save = () => {
     if (!d.title.trim()) return
+    const { title, sourceTitle, sourceCreator, rights, hook, caption, hashtags, niche, durationSec, aspectRatio, status, videoUrl } = d
     if (existing) {
-      updateClip(existing.id, d)
+      // Only the fields this form edits: posts and video are managed elsewhere
+      // (and may have changed in the background while this was open).
+      const managed = Boolean(existing.localMediaId || existing.mediaId)
+      updateClip(existing.id, {
+        title, sourceTitle, sourceCreator, rights, hook, caption, hashtags, niche, durationSec, aspectRatio, status,
+        ...(managed ? {} : { videoUrl: videoUrl || undefined }),
+      })
     } else {
-      const { title, sourceTitle, sourceCreator, rights, hook, caption, hashtags, niche, durationSec, aspectRatio, status, videoUrl } = d
       addClip({ title, sourceTitle, sourceCreator, rights, hook, caption, hashtags, niche, durationSec, aspectRatio, status, videoUrl: videoUrl || undefined })
     }
     onClose()
@@ -90,10 +96,12 @@ export function ClipModal({ existing, onClose }: { existing?: Clip; onClose: () 
           <input value={d.hook} onChange={(e) => set('hook', e.target.value)} placeholder="The scroll-stopping opening line" />
         </div>
 
-        <div className="field">
-          <label>Clip video URL (optional)</label>
-          <input value={d.videoUrl ?? ''} onChange={(e) => set('videoUrl', e.target.value)} placeholder="https://…/clip.mp4 — play it in the Validate tab" />
-        </div>
+        {!(existing && (existing.localMediaId || existing.mediaId)) && (
+          <div className="field">
+            <label>Clip video URL (optional)</label>
+            <input value={d.videoUrl ?? ''} onChange={(e) => set('videoUrl', e.target.value)} placeholder="https://…/clip.mp4 — or cut one in the Clip Editor" />
+          </div>
+        )}
 
         <div className="field">
           <label>Caption</label>

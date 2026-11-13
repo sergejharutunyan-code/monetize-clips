@@ -1,5 +1,6 @@
 import type { Clip, ClipStatus, Platform } from './types'
 import { PLATFORMS, PLATFORM_META } from './data'
+import { hasVideo } from './media'
 
 export const CLIP_STATUSES: ClipStatus[] = ['idea', 'editing', 'ready', 'scheduled', 'published']
 
@@ -22,7 +23,7 @@ export function overview(clips: Clip[]): Overview {
   for (const c of clips) {
     if (c.validated) validated++
     else if (c.status !== 'published') needsValidation++
-    if (c.videoUrl) withVideo++
+    if (hasVideo(c)) withVideo++
     for (const p of c.posts) {
       if (p.status === 'scheduled') scheduledPosts++
       if (p.status === 'published') publishedPosts++
