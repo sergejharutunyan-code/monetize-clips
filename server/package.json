@@ -3,13 +3,17 @@
   "private": true,
   "type": "module",
   "version": "0.1.0",
-  "description": "ClipForge backend — accounts, clip sync, Claude + YouTube proxies, and publishing.",
+  "description": "ClipForge backend \u2014 accounts, clip storage + conversion, and publishing to YouTube, Instagram and TikTok.",
   "scripts": {
-    "start": "node --experimental-sqlite index.mjs",
-    "dev": "node --experimental-sqlite --watch index.mjs"
+    "start": "node --experimental-sqlite --env-file-if-exists=.env index.mjs",
+    "dev": "node --experimental-sqlite --env-file-if-exists=.env --watch index.mjs",
+    "test": "node --experimental-sqlite --test test/*.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
     "express": "^4.21.2"
+  },
+  "engines": {
+    "node": ">=22.9"
   }
 }

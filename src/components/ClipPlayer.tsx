@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import type { Clip } from '../types'
 import { useStore } from '../store'
 import { fmtDuration } from '../utils'
+import { newMediaId, putBlob, useClipVideo } from '../media'
 
 const RATIO: Record<Clip['aspectRatio'], string> = {
   '9:16': '9 / 16',
@@ -23,38 +24,33 @@ const CHECKLIST = [
  * right aspect-ratio frame with the hook overlaid, run the checklist, and mark
  * it validated — a real status that gates scheduling.
  */
-export function ClipPlayer({ clip, onClose }: { clip: Clip; onClose: () => void }) {
-  const { updateClip } = useStore()
+export function ClipPlayer({ clip: opened, onClose }: { clip: Clip; onClose: () => void }) {
+  const { clips, updateClip } = useStore()
+  // Follow the live clip so changes made here (attach, validate) show immediately.
+  const clip = clips.find((c) => c.id === opened.id) ?? opened
   const videoRef = useRef<HTMLVideoElement>(null)
-  const [objectUrl, setObjectUrl] = useState<string | null>(null)
-  const [urlDraft, setUrlDraft] = useState(clip.videoUrl ?? '')
+  const [urlDraft, setUrlDraft] = useState(clip.mediaId ? '' : (clip.videoUrl ?? ''))
   const [showHook, setShowHook] = useState(true)
   const [checks, setChecks] = useState<boolean[]>(() => CHECKLIST.map(() => false))
   const [error, setError] = useState(false)
 
-  // A locally-uploaded file plays via an object URL; the saved clip URL persists.
-  const src = objectUrl ?? clip.videoUrl
+  // Plays the copy saved on this device when there is one, else the clip's URL.
+  const { src } = useClipVideo(clip)
 
-  useEffect(() => {
-    return () => {
-      if (objectUrl) URL.revokeObjectURL(objectUrl)
-    }
-  }, [objectUrl])
-
-  const onFile = (file: File | undefined) => {
+  // An attached file is saved on this device and becomes the clip's video.
+  const onFile = async (file: File | undefined) => {
     if (!file) return
-    if (objectUrl) URL.revokeObjectURL(objectUrl)
-    setObjectUrl(URL.createObjectURL(file))
+    const id = newMediaId()
+    await putBlob(id, file)
+    updateClip(clip.id, { localMediaId: id, mediaId: undefined, videoUrl: undefined, validated: false, validatedAt: undefined })
+    setUrlDraft('')
     setError(false)
   }
 
   const saveUrl = () => {
     const u = urlDraft.trim()
-    updateClip(clip.id, { videoUrl: u || undefined })
-    if (objectUrl) {
-      URL.revokeObjectURL(objectUrl)
-      setObjectUrl(null)
-    }
+    if (!u) return
+    updateClip(clip.id, { videoUrl: u, localMediaId: undefined, mediaId: undefined })
     setError(false)
   }
 
@@ -81,8 +77,10 @@ export function ClipPlayer({ clip, onClose }: { clip: Clip; onClose: () => void 
               <div className="player-frame" style={{ aspectRatio: RATIO[clip.aspectRatio] }}>
                 {src && !error ? (
                   <video
+                    key={src}
                     ref={videoRef}
                     src={src}
+                    poster={clip.thumb}
                     controls
                     playsInline
                     onError={() => setError(true)}
@@ -119,7 +117,7 @@ export function ClipPlayer({ clip, onClose }: { clip: Clip; onClose: () => void 
                   type="file"
                   accept="video/*"
                   style={{ display: 'none' }}
-                  onChange={(e) => onFile(e.target.files?.[0])}
+                  onChange={(e) => void onFile(e.target.files?.[0])}
                 />
               </label>
               <div className="row" style={{ gap: 6, marginTop: 8 }}>
@@ -132,7 +130,7 @@ export function ClipPlayer({ clip, onClose }: { clip: Clip; onClose: () => void 
                 <button className="btn sm" onClick={saveUrl}>Save</button>
               </div>
               <div className="muted" style={{ fontSize: 11.5, marginTop: 6 }}>
-                Uploaded files play in this session. Saving a URL keeps it on the clip.
+                The file is saved on this device and becomes this clip’s video (what Publish sends out).
               </div>
             </div>
 

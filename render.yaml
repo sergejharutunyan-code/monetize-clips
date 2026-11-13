@@ -1,45 +1,57 @@
-# Render Blueprint — deploy the ClipForge backend with one click.
-# In Render: New → Blueprint → connect this repo. Render reads this file,
-# builds server/Dockerfile, and prompts for the secret env vars marked below.
+# Render Blueprint — deploy ClipForge (web app + backend + ffmpeg) with one click.
+# In Render: New → Blueprint → connect this repo. Render reads this file, builds
+# server/Dockerfile from the repo root, and prompts for the secrets marked below.
 # Docs: https://render.com/docs/blueprint-spec
 services:
   - type: web
     name: clipforge-backend
     runtime: docker
     dockerfilePath: ./server/Dockerfile
-    dockerContext: ./server
-    plan: free # free web service (spins down when idle; SQLite resets on redeploy)
+    dockerContext: .
+    plan: free # see the caveats below before relying on this for real posting
     healthCheckPath: /health
     autoDeploy: false
     envVars:
       # Signs OAuth state — Render generates a strong random value for you.
       - key: CLIPFORGE_SECRET
         generateValue: true
-      # SQLite location. On the free plan there is no persistent disk, so this
-      # lives on ephemeral storage and resets on each deploy/spin-down. For
-      # durable accounts + clips, switch `plan` to `starter` and uncomment the
-      # `disk:` block below (a persistent disk requires a paid instance).
+      # Accounts, platform connections and clip videos are stored next to this file.
+      # The free plan has NO persistent disk: everything here is wiped on each
+      # deploy and each time the service spins down after ~15 idle minutes, and
+      # scheduled posts cannot fire while it sleeps. For real use switch `plan`
+      # to `starter` and uncomment the `disk:` block below.
       - key: CLIPFORGE_DB
         value: /app/data/clipforge.db
-      # Your published frontend origin (CORS) and full app URL (OAuth bounce-back).
+      # Extra origin allowed to call the API (the GitHub Pages copy of the app).
+      # The app served by this service itself needs no entry.
       - key: CLIPFORGE_ALLOW_ORIGIN
         value: https://sergejharutunyan-code.github.io
       - key: CLIPFORGE_APP_URL
         value: https://sergejharutunyan-code.github.io/monetize-clips
-      # Secrets — set these in the Render dashboard; never commit real values.
+      # ---- Secrets: set these in the Render dashboard; never commit real values. ----
+      # The service's public address is picked up automatically (RENDER_EXTERNAL_URL),
+      # so the redirect URIs are https://<this-service>.onrender.com/api/oauth/<platform>/callback
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: YOUTUBE_API_KEY
         sync: false
+      # YouTube publishing (Google Cloud OAuth client)
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
-      # Must be https://<this-service>.onrender.com/api/oauth/youtube/callback
-      - key: GOOGLE_REDIRECT_URI
+      # Instagram publishing (Meta app → Instagram → API setup with Instagram login)
+      - key: INSTAGRAM_APP_ID
         sync: false
-    # Uncomment with `plan: starter` for a persistent SQLite database:
+      - key: INSTAGRAM_APP_SECRET
+        sync: false
+      # TikTok publishing (TikTok developer app → Login Kit + Content Posting API)
+      - key: TIKTOK_CLIENT_KEY
+        sync: false
+      - key: TIKTOK_CLIENT_SECRET
+        sync: false
+    # Uncomment with `plan: starter` to keep accounts, connections and clips:
     # disk:
     #   name: clipforge-data
     #   mountPath: /app/data
-    #   sizeGB: 1
+    #   sizeGB: 5

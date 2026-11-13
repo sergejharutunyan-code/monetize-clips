@@ -1,15 +1,31 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../store'
-import { PLATFORM_META, PLATFORMS, NICHES } from '../data'
+import { NICHES } from '../data'
 import { fmtDuration, fmtDate } from '../utils'
 import type { Clip, ClipStatus } from '../types'
 import { ClipModal } from './ClipModal'
 import { ClipPlayer } from './ClipPlayer'
+import { hasVideo } from '../media'
+import { useBackend } from '../backend/hooks'
+import { deleteMedia, isSignedIn } from '../backend/api'
+import { PlatformDots } from './bits'
 
 const STATUSES: (ClipStatus | 'all')[] = ['all', 'idea', 'editing', 'ready', 'scheduled', 'published']
 
-export function Library() {
+export function Library({ onPublish }: { onPublish: (clipId: string) => void }) {
   const { clips, removeClip } = useStore()
+  const backend = useBackend()
+
+  const remove = (c: Clip) => {
+    if (c.posts.some((p) => p.jobId && (p.status === 'publishing' || p.status === 'scheduled'))) {
+      alert('This clip still has posts going out or scheduled. Cancel them on the Publish page first.')
+      return
+    }
+    if (!confirm(`Delete “${c.title}”?`)) return
+    // Best effort: also free the copy on the backend.
+    if (c.mediaId && isSignedIn(backend)) void deleteMedia(backend.apiUrl, backend.token, c.mediaId).catch(() => {})
+    removeClip(c.id)
+  }
   const [editing, setEditing] = useState<Clip | null>(null)
   const [playing, setPlaying] = useState<Clip | null>(null)
   const [creating, setCreating] = useState(false)
@@ -104,7 +120,7 @@ export function Library() {
                 return (
                   <tr key={c.id}>
                     <td>
-                      <div className="clip-title">
+                      <div className="clip-title" style={{ minWidth: 180 }}>
                         {c.series && <span className="badge scheduled" style={{ marginRight: 6, fontSize: 10.5 }}>P{c.series.part}/{c.series.total}</span>}
                         {c.title}
                       </div>
@@ -119,21 +135,7 @@ export function Library() {
                       <span className={`rights ${c.rights}`}>{c.rights}</span>
                     </td>
                     <td>
-                      <span className="platform-dots">
-                        {PLATFORMS.map((pl) => {
-                          const post = c.posts.find((p) => p.platform === pl)!
-                          return (
-                            <span
-                              key={pl}
-                              className={`pd ${post.status !== 'not_posted' ? 'on' : ''}`}
-                              style={{ background: PLATFORM_META[pl].color }}
-                              title={`${PLATFORM_META[pl].label}: ${post.status.replace('_', ' ')}`}
-                            >
-                              {PLATFORM_META[pl].glyph}
-                            </span>
-                          )
-                        })}
-                      </span>
+                      <PlatformDots posts={c.posts} />
                     </td>
                     <td>
                       <span className={`badge ${c.status}`}>{c.status}</span>
@@ -141,19 +143,17 @@ export function Library() {
                         <span className="badge published" style={{ marginLeft: 6, fontSize: 10.5 }} title="Validated in the player">✓</span>
                       )}
                     </td>
-                    <td className="num">
+                    <td className="num" style={{ whiteSpace: 'nowrap' }}>
+                      <button className="btn sm" onClick={() => onPublish(c.id)} title="Post this clip to YouTube, Instagram and TikTok">
+                        Publish
+                      </button>
                       <button className="btn ghost sm" onClick={() => setPlaying(c)} title="Open the video player">
-                        ▶ {c.videoUrl ? 'Play' : 'Add video'}
+                        ▶ {hasVideo(c) ? 'Play' : 'Add video'}
                       </button>
                       <button className="btn ghost sm" onClick={() => setEditing(c)}>
                         Edit
                       </button>
-                      <button
-                        className="btn ghost sm danger"
-                        onClick={() => {
-                          if (confirm(`Delete “${c.title}”?`)) removeClip(c.id)
-                        }}
-                      >
+                      <button className="btn ghost sm danger" onClick={() => remove(c)}>
                         Delete
                       </button>
                     </td>

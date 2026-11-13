@@ -47,23 +47,32 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` planned
 - [x] In-app **clip rendering**: trim to a window, reframe to 9:16 (focus + zoom),
       burn in the hook caption, and export a real playable clip file — all
       client-side (Canvas + MediaRecorder), no backend. Add straight to Library.
-- [ ] Object storage for rendered clips (so added clips persist past a reload,
-      not just as session object URLs) with thumbnails.
+- [x] Exports carry their **audio** (they were silent), default to 1080p, and
+      record MP4 (H.264 + AAC) where the browser can.
+- [x] Exported clips **persist**: saved in the browser (IndexedDB) with a poster
+      frame, and stored on the backend once published.
+- [x] Backend **conversion** (ffmpeg) of any upload to the one format every
+      platform accepts.
 - [ ] Zoom/pan keyframes, multi-segment cuts, and beat/scene detection.
 - [ ] Auto-transcription → suggest clip-worthy moments to feed the AI workshop.
 
 ## Phase 4 — Real publishing integrations
 
-- [~] **YouTube** — real OAuth 2.0 + resumable Shorts upload, wired from the Clip
-      Editor. Code-complete; **gated on your Google OAuth app** (client id/secret
-      + verification). See `BACKEND.md`.
-- [ ] **Instagram** Graph API (Reels) and **TikTok** Content Posting API —
-      scaffolded and gated (`501`) until each has an *approved* developer app
-      (business account + review, typically weeks). The approval is the blocker,
-      not the code.
-- [ ] OAuth connection manager for multiple accounts per platform.
-- [ ] Server-side scheduler/worker that actually posts at the scheduled time,
-      with retries and failure surfacing.
+- [x] **One publish flow for all three platforms** — pick platforms and options,
+      post now or schedule, watch progress, get the live link or a plain-language
+      failure reason with Retry.
+- [x] **YouTube** — OAuth 2.0 + resumable upload, token refresh.
+- [x] **Instagram** — Instagram Login OAuth (long-lived tokens, refresh) + Reels
+      publishing (container → processing → publish), by URL or direct upload.
+- [x] **TikTok** — Login Kit OAuth + Content Posting API (direct post with
+      privacy options, or inbox drafts), chunked upload, status polling.
+- [x] Server-side **scheduler/worker** that posts at the scheduled time.
+- [x] **Post-by-hand path** for platforms without API access yet: device share
+      sheet, download, upload links, mark as posted.
+- [x] End-to-end tests against stand-in platform APIs.
+- [ ] Verify against each live platform with real developer apps (needs your
+      credentials; each platform also gates new apps — see `BACKEND.md`).
+- [ ] Multiple accounts per platform; automatic retries with backoff.
 
 ## Phase 5 — Real analytics (replacing the removed fakes)
 
@@ -76,7 +85,8 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` planned
 
 - [ ] Rights/licensing records per source; originality/dedupe checks; required
       disclosures (sponsorship, AI-generated) surfaced before publish.
-- [ ] Gate publishing on `validated` (can't schedule an unvalidated clip).
+- [~] Publishing is blocked while a clip's rights are "unverified"; gating on
+      `validated` as well is still open.
 - [ ] Multi-brand/multi-account management and team roles.
 - [ ] Quality: automated tests, typecheck/lint in CI, error monitoring,
       telemetry, custom domain.
@@ -84,6 +94,5 @@ Legend: `[x]` done · `[~]` in progress · `[ ]` planned
 ---
 
 ### Doing now
-Phase 1 → **Real trending source (YouTube Data API)**. Bring your own API key in
-Discover; live trending videos flow straight into the AI workshop. Example
-sources stay as the no-key fallback.
+Phase 4 → connect real developer apps for YouTube, Instagram and TikTok and run
+the publish flow against the live platforms.

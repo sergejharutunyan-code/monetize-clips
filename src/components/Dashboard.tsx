@@ -3,6 +3,7 @@ import { useStore } from '../store'
 import { overview, statusCounts, platformCounts } from '../metrics'
 import type { Clip } from '../types'
 import { ClipPlayer } from './ClipPlayer'
+import { hasVideo } from '../media'
 
 export function Dashboard({ onNavigate }: { onNavigate: (v: string) => void }) {
   const { clips } = useStore()
@@ -20,11 +21,11 @@ export function Dashboard({ onNavigate }: { onNavigate: (v: string) => void }) {
         <div>
           <h1 className="page-title">Dashboard</h1>
           <p className="page-desc">
-            Your clip pipeline across TikTok, Instagram, and YouTube — create, validate, schedule, publish.
+            Your clip pipeline across TikTok, Instagram, and YouTube — cut, validate, publish.
           </p>
         </div>
-        <button className="btn primary" onClick={() => onNavigate('library')}>
-          + New clip
+        <button className="btn primary" onClick={() => onNavigate('editor')}>
+          ✂ Cut a clip
         </button>
       </div>
 
@@ -55,7 +56,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (v: string) => void }) {
                     </div>
                     <div className="clip-source">
                       <span className={`badge ${c.status}`} style={{ fontSize: 10.5, marginRight: 6 }}>{c.status}</span>
-                      {c.videoUrl ? 'video attached' : 'no video yet'}
+                      {hasVideo(c) ? 'video attached' : 'no video yet'}
                     </div>
                   </div>
                   <button className="btn sm" onClick={() => setPlaying(c)}>▶ Validate</button>
@@ -89,7 +90,7 @@ export function Dashboard({ onNavigate }: { onNavigate: (v: string) => void }) {
           <div className="card card-pad">
             <div className="card-head">
               <h3 className="card-title">Distribution</h3>
-              <button className="btn ghost sm" onClick={() => onNavigate('scheduler')}>Scheduler →</button>
+              <button className="btn ghost sm" onClick={() => onNavigate('scheduler')}>Publish →</button>
             </div>
             <div className="tbl-scroll">
               <table className="tbl">
