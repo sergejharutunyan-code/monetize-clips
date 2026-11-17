@@ -5,6 +5,7 @@ import { useBackend, useConnections } from '../backend/hooks'
 import { connectUrl, disconnect, isSignedIn } from '../backend/api'
 import { copyText } from '../publish'
 import { AccountSync } from './AccountSync'
+import { AICard, HiggsfieldCard } from './StudioConnections'
 import { PlatformIcon } from './bits'
 
 const NEEDS: Record<Platform, { account: string; app: string; limits: string }> = {
@@ -66,7 +67,7 @@ export function Accounts({ notice, onDismissNotice }: { notice: { ok: boolean; t
         <div>
           <h1 className="page-title">Accounts</h1>
           <p className="page-desc">
-            Connect YouTube, Instagram and TikTok once, then publish every clip to all three from here.
+            Connect Claude for research and writing, Higgsfield for generation, and your YouTube, Instagram and TikTok accounts for publishing.
           </p>
         </div>
       </div>
@@ -82,6 +83,11 @@ export function Accounts({ notice, onDismissNotice }: { notice: { ok: boolean; t
 
       <div style={{ marginBottom: 16 }}>
         <AccountSync />
+      </div>
+
+      <div className="grid grid-2" style={{ marginBottom: 16, alignItems: 'start' }}>
+        <AICard />
+        <HiggsfieldCard />
       </div>
 
       <div className="card card-pad">

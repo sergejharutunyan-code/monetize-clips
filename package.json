@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Cut long videos into short clips and publish them to TikTok, Instagram and YouTube from one app.",
+  "description": "Research trends, write plots for original animated shorts, generate them with Higgsfield, and publish to TikTok, Instagram and YouTube.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
@@ -13,6 +13,7 @@
     "test": "npm --prefix server test"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.9.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

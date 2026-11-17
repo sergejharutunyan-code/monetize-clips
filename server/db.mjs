@@ -76,6 +76,26 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_jobs_user ON jobs(user_id);
   CREATE INDEX IF NOT EXISTS idx_jobs_due ON jobs(status, run_at);
+  -- One Higgsfield generation (one part of a video's plot).
+  CREATE TABLE IF NOT EXISTS renders (
+    id           TEXT PRIMARY KEY,
+    user_id      TEXT NOT NULL,
+    clip_id      TEXT,
+    part_index   INTEGER NOT NULL,
+    model        TEXT NOT NULL,
+    body         TEXT NOT NULL,
+    status       TEXT NOT NULL,        -- queued | submitted | in_progress | downloading | completed | failed | canceled
+    request_id   TEXT,
+    cancel_url   TEXT,
+    media_id     TEXT,
+    error        TEXT,
+    attempts     INTEGER NOT NULL DEFAULT 0,
+    next_poll_at TEXT,
+    created_at   TEXT NOT NULL,
+    updated_at   TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_renders_user ON renders(user_id);
+  CREATE INDEX IF NOT EXISTS idx_renders_status ON renders(status);
 `)
 
 /**

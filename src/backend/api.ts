@@ -1,4 +1,5 @@
-import type { Clip, Platform } from '../types'
+import type { Clip, Platform, Plot, RenderStatus, StylePreset, Trend } from '../types'
+import type { FormatId } from '../../shared/studio.mjs'
 
 export interface BackendSettings {
   apiUrl: string
@@ -95,6 +96,7 @@ export interface Health {
   app?: string
   ffmpeg?: boolean
   anthropic?: boolean
+  higgsfield?: boolean
   youtubeTrending?: boolean
   publish?: Record<Platform, boolean>
 }
@@ -250,3 +252,83 @@ export const cancelJob = (apiUrl: string, token: string, id: string) =>
 
 export const retryJob = (apiUrl: string, token: string, id: string) =>
   api<{ job: PublishJob }>(apiUrl, `/api/jobs/${encodeURIComponent(id)}/retry`, { method: 'POST', token }).then((r) => r.job)
+
+// ---- AI studio ----
+
+/** Claude can take a minute or two when it searches the web first. */
+const AI_TIMEOUT = 5 * 60 * 1000
+
+export const aiTrends = (apiUrl: string, token: string, input: { niche?: string; region?: string; count?: number; focus?: string }) =>
+  api<{ trends: Trend[] }>(apiUrl, '/api/ai/trends', { ...jsonBody(input), token, timeoutMs: AI_TIMEOUT }).then((r) => r.trends)
+
+export const aiPlot = (
+  apiUrl: string,
+  token: string,
+  input: { trend: Partial<Trend> & { title: string }; angle?: string; format: FormatId; style: StylePreset; seconds: number; tone?: string; factCheck?: boolean },
+) => api<{ plot: Plot }>(apiUrl, '/api/ai/plot', { ...jsonBody(input), token, timeoutMs: AI_TIMEOUT }).then((r) => r.plot)
+
+export const googleTrends = (apiUrl: string, token: string, geo: string) =>
+  api<{ trends: Trend[] }>(apiUrl, `/api/trends/google?geo=${encodeURIComponent(geo)}`, { token, timeoutMs: 30_000 }).then((r) => r.trends)
+
+export interface YouTubeVideo {
+  id: string
+  title: string
+  creator: string
+  url: string
+  niche: string
+  why: string
+  thumbUrl?: string
+  views?: number
+  publishedAt?: string
+}
+
+export const youtubeTrending = (apiUrl: string, token: string, region: string, categoryId: string) =>
+  api<{ videos: YouTubeVideo[] }>(apiUrl, `/api/trending?region=${encodeURIComponent(region)}&categoryId=${encodeURIComponent(categoryId)}`, { token, timeoutMs: 30_000 }).then((r) => r.videos)
+
+// ---- Higgsfield ----
+
+export interface HiggsfieldModel {
+  path: string
+  label: string
+  minSeconds: number
+  maxSeconds: number
+  audio: boolean
+}
+
+export const higgsfieldInfo = (apiUrl: string, token: string) =>
+  api<{ configured: boolean; models: HiggsfieldModel[]; defaultModel: string }>(apiUrl, '/api/higgsfield', { token, timeoutMs: 20_000 })
+
+export interface RenderInfo {
+  id: string
+  clipId?: string
+  partIndex: number
+  model: string
+  duration?: number
+  status: RenderStatus
+  progress?: string
+  error?: string
+  media?: ServerMedia
+}
+
+export const createRenders = (
+  apiUrl: string,
+  token: string,
+  req: {
+    clipId: string
+    model: string
+    resolution: string
+    aspectRatio: string
+    generateAudio: boolean
+    extra?: Record<string, unknown>
+    parts: { index: number; prompt: string; duration: number }[]
+  },
+) => api<{ renders: RenderInfo[] }>(apiUrl, '/api/higgsfield/renders', { ...jsonBody(req), token }).then((r) => r.renders)
+
+export const getRenders = (apiUrl: string, token: string, ids: string[]) =>
+  api<{ renders: RenderInfo[] }>(apiUrl, `/api/higgsfield/renders?ids=${ids.map(encodeURIComponent).join(',')}`, { token, timeoutMs: 20_000 }).then((r) => r.renders)
+
+export const cancelRender = (apiUrl: string, token: string, id: string) =>
+  api<{ render: RenderInfo }>(apiUrl, `/api/higgsfield/renders/${encodeURIComponent(id)}/cancel`, { method: 'POST', token }).then((r) => r.render)
+
+export const retryRender = (apiUrl: string, token: string, id: string) =>
+  api<{ render: RenderInfo }>(apiUrl, `/api/higgsfield/renders/${encodeURIComponent(id)}/retry`, { method: 'POST', token }).then((r) => r.render)

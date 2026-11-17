@@ -1,33 +1,32 @@
 import { useStore } from '../store'
 
+const STEPS = [
+  { title: 'Trend', body: 'Pick a topic people are searching for or arguing about this week. The trend is the topic, never someone else’s footage.' },
+  { title: 'Plot', body: 'One question in the first two seconds, one change per scene, a payoff at the end. 30–60 seconds, about 2.5 spoken words per second.' },
+  { title: 'Generate', body: 'Every Higgsfield prompt repeats the same style and host description, so clips made separately still look like one show.' },
+  { title: 'Assemble', body: 'Your voice (or one consistent voice) over the clips, captions burned in, title card up front.' },
+  { title: 'Publish', body: 'Same video natively on TikTok, Reels and Shorts; stagger the times and label it as AI-generated where asked.' },
+  { title: 'Learn', body: 'Keep the formats that hold attention, drop the ones that do not, and keep the host and style fixed so people recognize you.' },
+]
+
 export function Playbook() {
-  const { resetDemo, clearAll, clips } = useStore()
+  const { clearAll, clips } = useStore()
 
   return (
     <>
       <div className="page-head">
         <div>
           <h1 className="page-title">Playbook</h1>
-          <p className="page-desc">
-            The operating model behind clip-and-distribute, and the rules that keep the accounts alive.
-          </p>
+          <p className="page-desc">How to run a channel of original animated shorts — and the rules that keep it safe to monetize.</p>
         </div>
-      </div>
-
-      <div className="callout" style={{ marginBottom: 16 }}>
-        <strong>Do this legally.</strong> Reuploading other people’s videos verbatim is copyright infringement and violates
-        every platform’s terms — it leads to takedowns, demonetization, and permanent bans. Build a real business on content
-        you <em>own</em>, have <em>licensed</em>, or have <em>written permission</em> to use — and transform it (your edit,
-        commentary, captions, translation) so it’s additive, not a copy. The Rights field on every clip is there to force this
-        decision before you publish.
       </div>
 
       <div className="grid grid-2" style={{ alignItems: 'start' }}>
         <div className="card card-pad prose">
-          <h3>The core loop</h3>
+          <h3>The loop</h3>
           <div className="stack" style={{ gap: 12 }}>
             {STEPS.map((s, i) => (
-              <div key={i} className="row" style={{ gap: 12, alignItems: 'flex-start' }}>
+              <div key={s.title} className="row" style={{ gap: 12, alignItems: 'flex-start' }}>
                 <span className="step-num">{i + 1}</span>
                 <div>
                   <div style={{ fontWeight: 650, fontSize: 14 }}>{s.title}</div>
@@ -40,71 +39,65 @@ export function Playbook() {
 
         <div className="stack">
           <div className="card card-pad prose">
-            <h3>What actually pays</h3>
+            <h3>What makes these videos work</h3>
             <ul>
-              <li><strong>Volume × consistency.</strong> One good edit reposted natively to 3 platforms is 3 shots at the algorithm. Daily beats sporadic.</li>
-              <li><strong>The first 2 seconds.</strong> Retention is the whole game. A strong hook and a reason to watch till the end drive every payout.</li>
-              <li><strong>Native packaging.</strong> Re-export per platform (no visible watermarks), tune captions and hashtags, post in-app.</li>
-              <li><strong>Own the niche.</strong> A consistent theme trains the algorithm and compounds a followable identity.</li>
+              <li><strong>A recognizable host.</strong> One character, one look, one voice, in every video. That is the “distinctive style” people follow.</li>
+              <li><strong>The first two seconds.</strong> Open on the question or the moment it goes wrong — not on an intro.</li>
+              <li><strong>Say it, show it, caption it.</strong> Narration tells the story; the picture acts it out; the caption adds the punchline or the number.</li>
+              <li><strong>Variety inside the format.</strong> Rotate stories, how-tos, explainers and myth-busters so the feed does not look mass-produced.</li>
             </ul>
           </div>
-
           <div className="card card-pad prose">
             <h3>Where the money comes from</h3>
             <ul>
-              <li><strong>Creator funds:</strong> TikTok Creator Rewards, YouTube Shorts revenue share, Instagram bonuses (region/invite dependent).</li>
-              <li><strong>Off-platform:</strong> this is usually the bigger prize — sponsorships, affiliate links, driving traffic to a product, newsletter, or channel you own.</li>
-              <li><strong>Licensing:</strong> if you produce original viral clips, you can license them out.</li>
+              <li><strong>Creator programs:</strong> YouTube Partner Program (Shorts revenue share), TikTok Creator Rewards (videos over one minute), Instagram bonuses where offered.</li>
+              <li><strong>Off-platform:</strong> sponsorships and affiliate links fit how-tos and explainers naturally.</li>
+              <li><strong>The character itself:</strong> an original host can become merch, a series or a licensed asset — because you own it.</li>
             </ul>
           </div>
         </div>
       </div>
 
       <div className="card card-pad prose" style={{ marginTop: 16 }}>
-        <h3>Staying compliant</h3>
+        <h3>Staying original and monetizable</h3>
         <div className="grid grid-3">
           <div>
-            <strong style={{ fontSize: 13.5 }}>Rights first</strong>
-            <p style={{ fontSize: 13 }}>Own it, license it, or get written permission. Fair-use is narrow and not a shield for reposting whole clips.</p>
+            <strong style={{ fontSize: 13.5 }}>Original by design</strong>
+            <p style={{ fontSize: 13 }}>
+              No real people, brands, logos or franchise characters, and no “in the style of” a studio or artist — the prompts and the style editor steer away from all of them.
+              Stories are fictional composites, never a retelling of someone’s post.
+            </p>
           </div>
           <div>
-            <strong style={{ fontSize: 13.5 }}>Transform it</strong>
-            <p style={{ fontSize: 13 }}>Add commentary, editing, captions, or analysis. Platforms down-rank and demonetize unoriginal re-uploads.</p>
+            <strong style={{ fontSize: 13.5 }}>Label AI content</strong>
+            <p style={{ fontSize: 13 }}>
+              Turn on TikTok’s AI-generated label and Instagram’s AI info. YouTube asks about realistic altered content — cartoons usually do not need it, but disclose anything that could pass as real.
+            </p>
           </div>
           <div>
-            <strong style={{ fontSize: 13.5 }}>Disclose &amp; credit</strong>
-            <p style={{ fontSize: 13 }}>Tag original creators, mark sponsorships and AI-generated content, and follow each platform’s disclosure rules.</p>
+            <strong style={{ fontSize: 13.5 }}>Not “mass-produced”</strong>
+            <p style={{ fontSize: 13 }}>
+              YouTube does not pay for repetitive, low-effort or mass-produced videos. Your own voice, a real point of view, accurate facts and varied formats are what keep a channel eligible.
+            </p>
           </div>
         </div>
+        <p className="muted" style={{ fontSize: 12.5, marginBottom: 0 }}>
+          Also check your Higgsfield plan allows commercial use, and fact-check how-tos and explainers before posting — the Studio’s fact notes flag what to look at.
+        </p>
       </div>
 
       <div className="card card-pad" style={{ marginTop: 16 }}>
         <div className="card-head">
           <h3 className="card-title">Data</h3>
-          <span className="card-hint">{clips.length} clips stored locally in your browser</span>
+          <span className="card-hint">{clips.length} videos stored in this browser</span>
         </div>
         <p className="muted" style={{ fontSize: 13.5, marginTop: 0 }}>
-          Your clip list and exported clip files live in this browser. Connect the backend in Accounts to post
-          automatically and to keep a copy of your clips in an account.
+          Videos, saved trends, styles, clip files and voiceovers live in this browser. Connect a backend in Accounts to keep a copy in an account.
         </p>
-        <div className="row" style={{ gap: 10 }}>
-          <button className="btn" onClick={() => confirm('Reload the demo dataset? This replaces your current clips.') && resetDemo()}>
-            Reload demo data
-          </button>
-          <button className="btn danger" onClick={() => confirm('Delete all clips? This cannot be undone.') && clearAll()}>
-            Clear all data
-          </button>
-        </div>
+        <button className="btn danger" onClick={() => confirm('Delete all videos from this browser? This cannot be undone.') && clearAll()}>
+          Clear all videos
+        </button>
       </div>
     </>
   )
 }
-
-const STEPS = [
-  { title: 'Source', body: 'Pull from content you own or have cleared — your own long-form, licensed footage, or a creator who gave permission.' },
-  { title: 'Clip', body: 'Cut the 15–60s moment with the strongest hook. One long video yields many clips.' },
-  { title: 'Package', body: 'Add captions, a hook overlay, and a payoff. Re-export vertical (9:16), watermark-free.' },
-  { title: 'Distribute', body: 'Publish to TikTok, Instagram Reels, and YouTube Shorts from the Publish page. Stagger release times.' },
-  { title: 'Measure', body: 'Track views, retention, and payout per platform. Double down on what hits.' },
-  { title: 'Compound', body: 'Feed winners back into the next batch. Consistency trains the algorithm and grows a followable identity.' },
-]

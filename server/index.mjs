@@ -13,8 +13,12 @@ import {
   genId, hashPassword, verifyPassword, createSession, deleteSession,
   requireAuth, userFromToken, signState, verifyState,
 } from './auth.mjs'
-import { analyzeVideo, MODEL } from './lib/claude.mjs'
+import * as claude from './lib/claude.mjs'
 import * as yt from './lib/youtube.mjs'
+import * as hf from './lib/higgsfield.mjs'
+import { googleTrends } from './lib/trends.mjs'
+import { createRenders, listRenders, getRender, cancelRender, retryRender, publicRender, startRenderWorker } from './lib/renders.mjs'
+import { FORMAT_IDS } from '../shared/studio.mjs'
 import {
   HAS_FFMPEG, receiveUpload, getMedia, getMediaByToken, deleteMedia, publicMedia, mediaPath, mimeForFile, resumeProcessing,
 } from './lib/media.mjs'
@@ -25,6 +29,14 @@ import { createJob, getJob, listJobs, cancelJob, retryJob, publicJob, startWorke
 import { PRIVACY as TIKTOK_PRIVACY } from './lib/tiktok.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
+/** Keep only the style fields the plot writer reads, as short strings. */
+function cleanStyle(s) {
+  if (!s || typeof s !== 'object') return null
+  const out = {}
+  for (const k of ['name', 'look', 'palette', 'motion', 'character', 'voice', 'music']) out[k] = String(s[k] || '').slice(0, 600)
+  return out.look && out.character ? out : null
+}
+
 const isEmail = (s) => typeof s === 'string' && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s)
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
 
@@ -51,8 +63,9 @@ export function createApp() {
     res.json({
       ok: true,
       app: 'clipforge',
-      model: MODEL,
-      anthropic: Boolean(process.env.ANTHROPIC_API_KEY),
+      model: claude.MODEL,
+      anthropic: claude.isConfigured(),
+      higgsfield: hf.isConfigured(),
       youtubeTrending: Boolean(process.env.YOUTUBE_API_KEY),
       ffmpeg: HAS_FFMPEG,
       publish: Object.fromEntries(Object.entries(PLATFORMS).map(([id, mod]) => [id, mod.isConfigured()])),
@@ -123,26 +136,125 @@ export function createApp() {
     res.json({ ok: true, count: clips.length })
   })
 
-  // ---- Claude proxy (open; uses the server's key) ----
-  app.post('/api/analyze', async (req, res) => {
-    if (!process.env.ANTHROPIC_API_KEY) return res.status(501).json({ error: 'ANTHROPIC_API_KEY is not set on the server.' })
-    const { title, creator, niche } = req.body || {}
-    if (!title) return res.status(400).json({ error: 'Missing "title".' })
+  // ---- AI studio (Claude, server key) ----
+  const aiGuard = (res) => {
+    if (claude.isConfigured()) return true
+    res.status(501).json({ error: 'ANTHROPIC_API_KEY is not set on the backend.' })
+    return false
+  }
+  const aiFail = (res, e) => res.status(e?.status || 502).json({ error: e?.message || 'Claude request failed.' })
+
+  app.post('/api/ai/trends', requireAuth, async (req, res) => {
+    if (!aiGuard(res)) return
+    const b = req.body || {}
     try {
-      res.json(await analyzeVideo({ title, creator, niche }))
+      res.json({ trends: await claude.researchTrends({ niche: b.niche, region: b.region, count: b.count, focus: b.focus }) })
     } catch (e) {
-      res.status(502).json({ error: e?.message || 'Analysis failed.' })
+      aiFail(res, e)
     }
   })
 
-  // ---- YouTube trending (open; server's key) ----
-  app.get('/api/trending', async (req, res) => {
+  app.post('/api/ai/plot', requireAuth, async (req, res) => {
+    if (!aiGuard(res)) return
+    const b = req.body || {}
+    const style = cleanStyle(b.style)
+    if (!b.trend?.title || !FORMAT_IDS.includes(b.format) || !style) {
+      return res.status(400).json({ error: 'Send { trend: { title }, format, style, seconds }.' })
+    }
+    try {
+      const plot = await claude.writePlot({
+        trend: {
+          title: String(b.trend.title).slice(0, 200),
+          summary: String(b.trend.summary || '').slice(0, 1000),
+          whyNow: String(b.trend.whyNow || '').slice(0, 1000),
+          sources: Array.isArray(b.trend.sources) ? b.trend.sources.slice(0, 4) : [],
+        },
+        angle: String(b.angle || '').slice(0, 400),
+        format: b.format,
+        style,
+        seconds: Number(b.seconds) || 45,
+        tone: String(b.tone || 'funny').slice(0, 40),
+        factCheck: b.factCheck !== false,
+      })
+      res.json({ plot })
+    } catch (e) {
+      aiFail(res, e)
+    }
+  })
+
+  // ---- Trend signals ----
+  app.get('/api/trends/google', requireAuth, async (req, res) => {
+    try {
+      res.json({ trends: await googleTrends(req.query.geo) })
+    } catch (e) {
+      res.status(e?.status || 502).json({ error: e?.message || 'Google Trends fetch failed.' })
+    }
+  })
+
+  // YouTube "most popular" with the server's key.
+  app.get('/api/trending', requireAuth, async (req, res) => {
     try {
       const videos = await yt.fetchTrending({ region: req.query.region, categoryId: req.query.categoryId || '' })
       res.json({ videos, live: true })
     } catch (e) {
       res.status(e?.status || 502).json({ error: e?.message || 'Trending fetch failed.' })
     }
+  })
+
+  // ---- Higgsfield video generation ----
+  app.get('/api/higgsfield', requireAuth, (_req, res) => {
+    res.json({ configured: hf.isConfigured(), models: hf.MODELS, defaultModel: hf.DEFAULT_MODEL })
+  })
+
+  // { clipId, model, resolution, aspectRatio, generateAudio, extra?, parts: [{ index, prompt, duration }] }
+  app.post('/api/higgsfield/renders', requireAuth, (req, res) => {
+    if (!hf.isConfigured()) return res.status(501).json({ error: 'Higgsfield is not set up on the backend (HIGGSFIELD_KEY_ID / HIGGSFIELD_KEY_SECRET).' })
+    const b = req.body || {}
+    const model = String(b.model || hf.DEFAULT_MODEL)
+    if (!hf.validModelPath(model)) return res.status(400).json({ error: 'That model path does not look right.' })
+    const known = hf.MODELS.find((m) => m.path === model)
+    const parts = (Array.isArray(b.parts) ? b.parts : []).slice(0, 20)
+    if (!parts.length) return res.status(400).json({ error: 'Nothing to generate.' })
+    for (const p of parts) {
+      if (!p || typeof p.prompt !== 'string' || !p.prompt.trim()) return res.status(400).json({ error: 'Every part needs a prompt.' })
+      const d = Math.round(Number(p.duration))
+      if (!Number.isFinite(d) || d < 1 || d > 60) return res.status(400).json({ error: 'Every part needs a duration in seconds.' })
+      if (known && (d < known.minSeconds || d > known.maxSeconds)) {
+        return res.status(400).json({ error: `${known.label.split(' ·')[0]} makes ${known.minSeconds}–${known.maxSeconds}s clips; part ${Number(p.index) + 1} asks for ${d}s.` })
+      }
+    }
+    let extra
+    if (b.extra && typeof b.extra === 'object' && !Array.isArray(b.extra)) extra = b.extra
+    const rows = createRenders({
+      userId: req.user.id,
+      clipId: b.clipId ? String(b.clipId) : undefined,
+      model,
+      parts: parts.map((p) => ({ index: Number(p.index) || 0, prompt: p.prompt.slice(0, 4000), duration: Math.round(Number(p.duration)) })),
+      resolution: ['480p', '720p', '1080p'].includes(b.resolution) ? b.resolution : '720p',
+      aspectRatio: ['9:16', '16:9', '1:1'].includes(b.aspectRatio) ? b.aspectRatio : '9:16',
+      generateAudio: b.generateAudio !== false,
+      extra,
+    })
+    res.json({ renders: rows.map(publicRender) })
+  })
+
+  app.get('/api/higgsfield/renders', requireAuth, (req, res) => {
+    const ids = req.query.ids ? String(req.query.ids).split(',').filter(Boolean).slice(0, 100) : null
+    res.json({ renders: listRenders(req.user.id, { ids, clipId: req.query.clipId ? String(req.query.clipId) : undefined }).map(publicRender) })
+  })
+
+  app.post('/api/higgsfield/renders/:id/cancel', requireAuth, async (req, res) => {
+    const row = getRender(req.params.id, req.user.id)
+    if (!row) return res.status(404).json({ error: 'Render not found.' })
+    if (!(await cancelRender(row))) return res.status(409).json({ error: 'That render already finished.' })
+    res.json({ render: publicRender(getRender(row.id, req.user.id)) })
+  })
+
+  app.post('/api/higgsfield/renders/:id/retry', requireAuth, (req, res) => {
+    const row = getRender(req.params.id, req.user.id)
+    if (!row) return res.status(404).json({ error: 'Render not found.' })
+    if (!retryRender(row)) return res.status(409).json({ error: 'Only failed or canceled renders can be retried.' })
+    res.json({ render: publicRender(getRender(row.id, req.user.id)) })
   })
 
   // ---- Clip video storage ----
@@ -330,6 +442,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const app = createApp()
   resumeProcessing()
   startWorker()
+  startRenderWorker()
   app.listen(PORT, () => {
     console.log(`ClipForge on http://localhost:${PORT}`)
     console.log(`  web app:      ${app.locals.staticDir ? 'served from ' + app.locals.staticDir : 'not built (run "npm run build" in the repo root)'}`)
@@ -338,6 +451,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     for (const [id, mod] of Object.entries(PLATFORMS)) {
       console.log(`  ${(mod.label + ':').padEnd(13)} ${mod.isConfigured() ? `configured  (redirect URI: ${redirectUri(id)})` : 'not configured'}`)
     }
-    console.log(`  Claude:       ${process.env.ANTHROPIC_API_KEY ? `set (${MODEL})` : 'not configured'}`)
+    console.log(`  Claude:       ${claude.isConfigured() ? `set (${claude.MODEL})` : 'not configured'}`)
+    console.log(`  Higgsfield:   ${hf.isConfigured() ? `configured (default model ${hf.DEFAULT_MODEL})` : 'not configured'}`)
   })
 }

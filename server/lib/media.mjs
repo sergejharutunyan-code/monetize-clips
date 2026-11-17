@@ -3,6 +3,8 @@
 
 import { spawn, spawnSync } from 'node:child_process'
 import { createWriteStream, existsSync, mkdirSync } from 'node:fs'
+import { Readable, Transform } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
 import { rename, stat, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import crypto from 'node:crypto'
@@ -106,6 +108,47 @@ export function receiveUpload(req, userId) {
     })
     req.pipe(out)
   })
+}
+
+/** Download a finished video from a URL (e.g. a Higgsfield result) into storage. */
+export async function ingestUrl(url, userId) {
+  let res
+  try {
+    res = await fetch(url, { signal: AbortSignal.timeout(10 * 60 * 1000) })
+  } catch (e) {
+    throw new Error(`Could not download the generated video: ${e?.cause?.code || e.message}`)
+  }
+  if (!res.ok || !res.body) throw new Error(`Could not download the generated video (HTTP ${res.status}).`)
+  const declared = Number(res.headers.get('content-length') || 0)
+  if (declared > MAX_UPLOAD_BYTES) throw new Error('The generated video is larger than this server accepts.')
+  const type = String(res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase()
+  const fromPath = (new URL(url).pathname.match(/\.(mp4|webm|mov|mkv)$/i) || [])[1]?.toLowerCase()
+  const ext = EXT_BY_MIME[type] || fromPath || 'mp4'
+  const id = `m_${crypto.randomBytes(9).toString('base64url')}`
+  const srcFile = `${id}.src.${ext}`
+  let bytes = 0
+  const limit = new Transform({
+    transform(chunk, _enc, cb) {
+      bytes += chunk.length
+      cb(bytes > MAX_UPLOAD_BYTES ? new Error('The generated video is larger than this server accepts.') : null, chunk)
+    },
+  })
+  try {
+    await pipeline(Readable.fromWeb(res.body), limit, createWriteStream(mediaPath(srcFile)))
+  } catch (e) {
+    await unlink(mediaPath(srcFile)).catch(() => {})
+    throw e
+  }
+  if (!bytes) {
+    await unlink(mediaPath(srcFile)).catch(() => {})
+    throw new Error('The generated video was empty.')
+  }
+  db.prepare(
+    `INSERT INTO media (id, user_id, token, status, src_file, mime, size, created_at)
+     VALUES (?, ?, ?, 'processing', ?, ?, ?, ?)`,
+  ).run(id, userId, crypto.randomBytes(24).toString('base64url'), srcFile, MIME_BY_EXT[ext] || 'video/mp4', bytes, new Date().toISOString())
+  enqueue(id)
+  return db.prepare('SELECT * FROM media WHERE id = ?').get(id)
 }
 
 export async function deleteMedia(row) {

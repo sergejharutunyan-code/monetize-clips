@@ -1,112 +1,90 @@
 # ClipForge
 
-Cut long videos into short clips and **publish them to TikTok, Instagram Reels and
-YouTube Shorts from one app** — now or on a schedule.
+Research what is trending, turn it into a plot for an **original 30–60 second
+animated short**, generate the clips with **Higgsfield**, put them together with
+**narration and on-screen text**, and publish to **TikTok, Instagram Reels and
+YouTube Shorts** — all in one app.
 
-1. **Cut** — load a video, trim it, reframe to vertical, burn in the hook, export
-   (with sound) in the browser.
-2. **Keep** — exported clips are saved on your device and survive reloads.
-3. **Publish** — one dialog sends the clip to all three platforms and shows the
-   live link (or the platform's reason, in plain words, if it fails).
+Everything it makes is original: your own recurring cartoon host, your own
+house style, fictional stories and accurate explainers. No one else’s footage is
+used anywhere.
 
-It tracks only **real workflow state** — statuses, counts, scheduling, and
-validation. There are no invented performance numbers (views, likes, revenue).
+## The loop
 
-![stack: React + TypeScript + Vite](https://img.shields.io/badge/React-TypeScript-blue)
-
-## What it does
-
-| Area | What you get |
-|------|--------------|
-| **Dashboard** | Honest workflow overview: clip counts, how many are validated vs. need review, live/scheduled posts, a pipeline-by-stage breakdown, and per-platform posting counts. |
-| **Discover + AI workshop** | **Live trending videos** from the YouTube Data API (bring your own key) or example sources. One click breaks a video into a **two-part clip series** — Part 1 (hook + cliffhanger) and Part 2 (payoff) — each with a short and broad-strokes premise, a native hook, caption, hashtags, and a suggested cut window. Save the pair into the Library as a linked series. Runs on a built-in **local engine** or the **Claude API**. |
-| **Clip Editor** | Turn a source video into a real vertical clip — **trim**, **reframe to 9:16 / 1:1 / 16:9** (pan + zoom), optionally **burn in the hook caption**, and **export a 1080p file with sound**. Cutting happens in the browser (the long source is never uploaded). Exports MP4 where the browser can; otherwise the backend converts it. Save to the Library and publish from there. |
-| **Clip Library** | Track every clip from idea → editing → ready → scheduled → published, with a **rights/clearance** field, niche, hook, caption, hashtags, duration and aspect ratio. Search and filter; play or publish any clip. Two-part series show a `P1/2` · `P2/2` badge. |
-| **Validate** | A native HTML5 video player to review clips before they ship. Load the rendered clip (**upload a file** or **paste a URL**), watch it in the correct aspect-ratio frame with the **hook overlaid**, run a review checklist, and mark it **validated** — a real status that flows through the pipeline. |
-| **Publish** | Send a clip to **YouTube, Instagram and TikTok** in one go — immediately or at a scheduled time — with per-platform options (visibility, TikTok drafts, Instagram feed). See what is uploading, scheduled, failed (with a Retry) and live (with links). |
-| **Accounts** | Connect the backend and your YouTube / Instagram / TikTok accounts. Shows exactly what each platform still needs. |
-| **Caption Studio** | Generate a hook (from proven formulas), caption, and platform-tuned hashtag set — copy-ready per platform. |
-| **Playbook** | The operating model plus the **legal/compliance** rules that keep accounts alive. |
-
-## Two ways to post — both from the same screen
-
-| | What it needs | What it does |
+| Step | Screen | What happens |
 |---|---|---|
-| **Automatic** | The ClipForge backend plus your own developer app on each platform (one-time setup, see [BACKEND.md](./BACKEND.md)) | Uploads the clip to the platforms for you, now or on a schedule, and reports back the live link. |
-| **By hand** | Nothing | *Share to an app…* (on phones — hands the clip to the Instagram / TikTok / YouTube app), or download + the platform's upload page. Mark it posted and it is tracked the same way. |
+| 1. Trend | **Trends** | Find topics people care about right now: **AI research** (Claude searches the web for your niche and cites sources), **Google Trends** (today’s top searches), **Wikipedia** (yesterday’s most-read), **YouTube** (most popular, as topic signals only), or **Evergreen** topics. A filter hides real people, deaths, crime and disasters. Each AI result comes with original video angles. |
+| 2. Plot | **Studio** | Pick a format — *Story time*, *How-to*, *Explain it simply*, *Myth vs fact*, *What if…*, *Top 3* — a style, a tone and a length. Claude writes a **plot package**: hook, beats, a narration script sized to the length (~2.5 words/s), 5–9 timed scenes, on-screen text for each, post caption and hashtags, and fact notes. Every field is editable. |
+| 3. Generate | **Studio** | The plot becomes **Higgsfield prompts**, split to the clip length your model makes (5–30 s). Each prompt repeats the full style and character description so separately generated clips match, and asks for no text in frame (text is added in step 4). Copy them into Higgsfield and upload the results — or, with the backend set up, generate all clips through the **Higgsfield API** in one tap. |
+| 4. Assemble | **Assemble** | Clips join in order (trim each), **record the narration** with a teleprompter or upload a voiceover, and the on-screen text and a title card are **burned in** in your style’s caption design. Exports a 1080×1920 video with sound. |
+| 5. Publish | **Publish** | One dialog posts to TikTok, Instagram and YouTube — now or scheduled — through the backend, or by hand with the phone’s share sheet / download. |
 
-YouTube, Instagram and TikTok each require **you** to register a developer app
-before any tool may post on your behalf, and each restricts new apps (YouTube:
-uploads stay private until the project is verified; TikTok: private posts or
-inbox drafts until the app is audited; Instagram: your own tester accounts until
-app review). ClipForge implements all three fully and tells you plainly when a
-platform says no — but it cannot skip those approvals.
+**Styles** holds the channel identity: art style, palette, motion, a recurring
+host character, narrator voice, music and caption design. Five originals are
+built in (Doodle Notebook, Bold Flat, Paper Cutout, Clay Miniature, Chalkboard
+Lab); edit them or make your own. No studio, franchise or artist names — the
+editor warns if one slips in.
 
-Your clip list and exported clip files are stored **in your browser**. The app
-ships with example clips you can reset or clear from the Playbook page.
+## What needs what
 
-## Responsible use
+| Feature | Works with no setup | Needs |
+|---|---|---|
+| Evergreen & Wikipedia trends | ✓ | — |
+| AI trend research, Claude-written plots | — | an Anthropic API key: paste your own in **Accounts** (works on the GitHub Pages site), or put one on the backend |
+| Offline plot writer (generic templates) | ✓ | — |
+| Higgsfield prompts (copy & paste) | ✓ | a Higgsfield account |
+| Generate clips via the Higgsfield API | — | the backend with `HIGGSFIELD_KEY_ID` / `HIGGSFIELD_KEY_SECRET` |
+| Assemble, record narration, export | ✓ | — |
+| Post by hand (share sheet, download) | ✓ | — |
+| Automatic & scheduled posting, Google Trends | — | the backend plus each platform’s developer app — see [BACKEND.md](./BACKEND.md) |
 
-Reuploading other people's videos verbatim is copyright infringement and violates
-platform terms — it leads to takedowns, demonetization, and bans. ClipForge is
-built for content you **own**, have **licensed**, or have **written permission** to
-use, and encourages **transforming** it (your edit, commentary, captions). Every
-clip carries a rights field so that decision happens before you publish. See the
-in-app **Playbook** for the full compliance checklist.
+Videos, trends, styles and clip files are stored in your browser (IndexedDB +
+localStorage) and survive reloads.
 
 ## Run it
 
-Requires Node 22.9+ and, for automatic posting, [ffmpeg](https://ffmpeg.org/download.html).
+Requires Node 22.9+ and, for the backend’s video conversion, [ffmpeg](https://ffmpeg.org/download.html).
 
 ```bash
 npm install
-npm run app      # the whole app (web UI + backend) on http://localhost:8787
+npm run app      # web app + backend on http://localhost:8787
 ```
 
-That is everything: cut, save, connect accounts, publish. Platform keys go in
-`server/.env` (copy `server/.env.example`). Docker and one-click Render deploys,
-and the step-by-step for each platform's developer app, are in
+Keys go in `server/.env` (copy `server/.env.example`): `ANTHROPIC_API_KEY`,
+`HIGGSFIELD_KEY_ID` / `HIGGSFIELD_KEY_SECRET`, and the platform apps. Docker,
+one-click Render, and step-by-step setup for every service are in
 **[BACKEND.md](./BACKEND.md)**.
 
-Working on the UI only:
-
 ```bash
-npm run dev      # Vite dev server (no backend: cutting and posting by hand still work)
+npm run dev      # UI only (Vite)
 npm run build    # type-check and build to dist/
-npm test         # backend end-to-end tests against stand-in platform APIs
+npm test         # backend end-to-end tests against stand-ins for Claude, Higgsfield and the platforms
 ```
 
-The static build also runs on its own (e.g. GitHub Pages): open **Accounts** and
-paste your backend's URL to switch automatic posting on.
+## Staying monetizable
+
+- **Label AI content** where platforms ask (TikTok’s AI-generated label,
+  Instagram’s AI info). Publishing reminds you.
+- **Avoid “mass-produced”**: YouTube does not monetize repetitive, low-effort
+  videos. Your own narration, accurate facts and varied formats matter.
+- **Check commercial use** on your Higgsfield plan.
+
+The in-app **Playbook** covers this in more detail.
 
 ## Tech
 
-- **React 18 + TypeScript**, built with **Vite**; clip list in `localStorage`,
-  clip files in IndexedDB
+- **React 18 + TypeScript**, Vite; canvas + Web Audio + MediaRecorder for assembly
+- **Claude** (`claude-opus-5-5`) via the Anthropic SDK, with server-side web search,
+  strict tool output and refusal fallbacks — the same request code runs on the
+  backend and in the browser (`shared/studio.mjs`)
 - **Backend**: Node 22 + Express + built-in SQLite + ffmpeg (`server/`)
-- Theme-aware (light/dark) with an accessible, colorblind-validated palette
-- Zero runtime dependencies beyond React
-
-## Project layout
 
 ```
-server/
-  index.mjs          # routes: accounts, clip storage, connections, publishing; serves the web app
-  config.mjs         # environment-derived settings (public URL, redirect URIs)
-  lib/media.mjs      # streamed uploads + ffmpeg conversion to platform-ready MP4
-  lib/publisher.mjs  # publish jobs + the worker that sends scheduled posts
-  lib/youtube.mjs  lib/instagram.mjs  lib/tiktok.mjs   # OAuth + upload for each platform
-  lib/connections.mjs                                  # stored platform tokens, refresh
-  test/              # end-to-end tests + stand-in platform APIs
+shared/studio.mjs   formats, house styles, Claude requests, plot validation, Higgsfield prompt composer, offline writer
+server/             API: accounts, Claude, Google Trends, Higgsfield render jobs, video storage, publishing
 src/
-  App.tsx            # shell + navigation + theme
-  store.tsx          # clip list (localStorage)
-  media.ts           # exported clip files (IndexedDB)
-  clipeditor.ts      # canvas + MediaRecorder rendering engine (video + audio)
-  publish.ts         # publish flow, job → post state, share/download helpers
-  backend/           # API client + hooks
-  ai/  trending/     # AI workshop engines, trending sources
-  components/
-    ClipEditor.tsx  PublishModal.tsx  Scheduler.tsx (Publish page)  Accounts.tsx
-    Library.tsx  Validate.tsx  ClipPlayer.tsx  Dashboard.tsx  Discover.tsx  …
+  components/       Trends, Studio (PlotView, HiggsfieldPanel), Assemble, Library (Videos), Styles, Publish, Accounts
+  render.ts         assembly engine: clips in order, captions, title card, voiceover mix, recording
+  trends.ts  ai/    trend sources and the Claude engine selection (backend / own key / offline)
+  store.tsx  media.ts  publish.ts  backend/
 ```

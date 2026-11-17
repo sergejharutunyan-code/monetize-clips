@@ -114,7 +114,7 @@ export async function ensureServerMedia(
     throw new Error(
       clip.videoUrl
         ? 'Could not download this clip’s video from its URL. Attach the video file to the clip instead.'
-        : 'This clip has no video yet. Export one in the Clip Editor, or attach a video file.',
+        : 'This video has no final cut yet. Export it in Assemble, or attach a video file.',
     )
   }
   onStatus?.({ stage: 'uploading', fraction: 0 })
