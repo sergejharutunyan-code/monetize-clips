@@ -31,7 +31,13 @@ services:
       # ---- Secrets: set these in the Render dashboard; never commit real values. ----
       # The service's public address is picked up automatically (RENDER_EXTERNAL_URL),
       # so the redirect URIs are https://<this-service>.onrender.com/api/oauth/<platform>/callback
+      # Claude: trend research and plot writing
       - key: ANTHROPIC_API_KEY
+        sync: false
+      # Higgsfield: video generation (console.higgsfield.ai → API keys)
+      - key: HIGGSFIELD_KEY_ID
+        sync: false
+      - key: HIGGSFIELD_KEY_SECRET
         sync: false
       - key: YOUTUBE_API_KEY
         sync: false

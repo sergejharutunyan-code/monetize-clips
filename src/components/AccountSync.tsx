@@ -80,8 +80,8 @@ export function AccountSync() {
       </div>
 
       <p className="muted" style={{ fontSize: 13.5, marginTop: 0 }}>
-        The backend stores your finished clips, converts them to MP4, and uploads them to the platforms — now or on a
-        schedule. Clip editing works without it. See <code>BACKEND.md</code> to run one.
+        The backend holds the API keys (Claude, Higgsfield, the platforms), generates clips, converts videos to MP4 and
+        publishes them — now or on a schedule. Everything else works without it. See <code>BACKEND.md</code> to run one.
       </p>
 
       <div className="field">
@@ -127,8 +127,8 @@ export function AccountSync() {
       {error && <div className="callout" style={{ marginTop: 12 }} role="alert">{error}</div>}
       {loggedIn && (
         <div className="muted" style={{ fontSize: 11.5, marginTop: 10 }}>
-          Pull replaces this device’s clip list with your account’s; push replaces your account’s with this device’s. Clip
-          videos you published are kept on the backend; unpublished exports stay on the device that made them.
+          Pull replaces this device’s video list with your account’s; push replaces your account’s with this device’s.
+          Generated clips and published videos are kept on the backend; files you uploaded or recorded stay on this device.
         </div>
       )}
     </div>

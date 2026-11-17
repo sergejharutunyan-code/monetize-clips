@@ -1,65 +1,93 @@
 import { useState } from 'react'
 import { useStore } from '../store'
-import { overview, statusCounts, platformCounts } from '../metrics'
-import type { Clip } from '../types'
-import { ClipPlayer } from './ClipPlayer'
+import type { Clip, ClipStatus } from '../types'
+import { PLATFORMS, PLATFORM_META } from '../data'
 import { hasVideo } from '../media'
+import type { Go } from '../nav'
+import { ClipPlayer } from './ClipPlayer'
 
-export function Dashboard({ onNavigate }: { onNavigate: (v: string) => void }) {
-  const { clips } = useStore()
+const STAGES: { status: ClipStatus; label: string }[] = [
+  { status: 'scripted', label: 'Plot written' },
+  { status: 'generating', label: 'Generating' },
+  { status: 'editing', label: 'Assembling' },
+  { status: 'ready', label: 'Ready' },
+  { status: 'scheduled', label: 'Scheduled' },
+  { status: 'published', label: 'Published' },
+]
+
+const STEPS = [
+  { n: 1, title: 'Find a trend', body: 'Research what people are talking about this week.', view: 'trends' as const },
+  { n: 2, title: 'Write the plot', body: 'Narration, captions and Higgsfield prompts in your house style.', view: 'studio' as const },
+  { n: 3, title: 'Generate the clips', body: 'In Higgsfield: paste the prompts, or let the backend do it.', view: 'studio' as const },
+  { n: 4, title: 'Assemble', body: 'Join the clips, record the voiceover, burn in the captions.', view: 'assemble' as const },
+  { n: 5, title: 'Publish', body: 'TikTok, Instagram and YouTube from one screen.', view: 'publish' as const },
+]
+
+export function Dashboard({ go }: { go: Go }) {
+  const { clips, savedTrends } = useStore()
   const [playing, setPlaying] = useState<Clip | null>(null)
-
-  const o = overview(clips)
-  const stages = statusCounts(clips)
-  const platforms = platformCounts(clips)
-  const toValidate = clips.filter((c) => !c.validated && c.status !== 'published')
-  const maxStage = Math.max(1, ...stages.map((s) => s.count))
+  const count = (s: ClipStatus) => clips.filter((c) => c.status === s).length
+  const max = Math.max(1, ...STAGES.map((s) => count(s.status)))
+  const live = clips.reduce((n, c) => n + c.posts.filter((p) => p.status === 'published').length, 0)
+  const scheduled = clips.reduce((n, c) => n + c.posts.filter((p) => p.status === 'scheduled').length, 0)
+  const inProgress = clips.filter((c) => !['published', 'scheduled'].includes(c.status)).slice(0, 6)
 
   return (
     <>
       <div className="page-head">
         <div>
           <h1 className="page-title">Dashboard</h1>
-          <p className="page-desc">
-            Your clip pipeline across TikTok, Instagram, and YouTube — cut, validate, publish.
-          </p>
+          <p className="page-desc">Trends in, original animated shorts out — on TikTok, Instagram and YouTube.</p>
         </div>
-        <button className="btn primary" onClick={() => onNavigate('editor')}>
-          ✂ Cut a clip
-        </button>
+        <button className="btn primary" onClick={() => go('trends')}>+ New video</button>
       </div>
 
+      {clips.length === 0 && (
+        <div className="card card-pad" style={{ marginBottom: 16 }}>
+          <div className="card-head"><h3 className="card-title">How it works</h3></div>
+          <div className="steps">
+            {STEPS.map((s) => (
+              <button key={s.n} className="step" onClick={() => go(s.view)}>
+                <span className="step-num">{s.n}</span>
+                <span>
+                  <strong>{s.title}</strong>
+                  <span className="muted">{s.body}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-4" style={{ marginBottom: 16 }}>
-        <StatTile label="Clips" value={`${o.total}`} sub={`${o.withVideo} with video`} color="var(--series-1)" />
-        <StatTile label="Validated" value={`${o.validated}`} sub="passed review" color="var(--series-2)" />
-        <StatTile label="Needs review" value={`${o.needsValidation}`} sub="not yet validated" color="var(--series-3)" />
-        <StatTile label="Live posts" value={`${o.publishedPosts}`} sub={`${o.scheduledPosts} scheduled`} color="var(--series-4)" />
+        <Stat label="Saved trends" value={savedTrends.length} sub="topics to write about" color="var(--series-3)" />
+        <Stat label="Videos" value={clips.length} sub={`${clips.filter(hasVideo).length} with a final cut`} color="var(--series-1)" />
+        <Stat label="Live posts" value={live} sub={`${scheduled} scheduled`} color="var(--series-2)" />
+        <Stat label="Reviewed" value={clips.filter((c) => c.validated).length} sub="passed the checklist" color="var(--series-4)" />
       </div>
 
       <div className="grid grid-2">
         <div className="card card-pad">
           <div className="card-head">
-            <h3 className="card-title">Needs validation</h3>
-            <button className="btn ghost sm" onClick={() => onNavigate('validate')}>
-              Open validator →
-            </button>
+            <h3 className="card-title">In progress</h3>
+            <button className="btn ghost sm" onClick={() => go('videos')}>All videos →</button>
           </div>
-          {toValidate.length === 0 ? (
-            <div className="empty">Nothing waiting — every clip has been reviewed.</div>
+          {inProgress.length === 0 ? (
+            <div className="empty">Nothing in progress. <button className="link-btn" onClick={() => go('trends')}>Find a trend</button></div>
           ) : (
             <div className="stack" style={{ gap: 8 }}>
-              {toValidate.slice(0, 6).map((c) => (
-                <div key={c.id} className="row between" style={{ padding: '10px 12px', background: 'var(--page)', borderRadius: 9, border: '1px solid var(--border)' }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div className="clip-title" style={{ fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {c.title}
-                    </div>
-                    <div className="clip-source">
-                      <span className={`badge ${c.status}`} style={{ fontSize: 10.5, marginRight: 6 }}>{c.status}</span>
-                      {hasVideo(c) ? 'video attached' : 'no video yet'}
-                    </div>
+              {inProgress.map((c) => (
+                <div key={c.id} className="post-line">
+                  {c.thumb ? <img className="thumb" src={c.thumb} alt="" /> : <div className="thumb empty-thumb">🎬</div>}
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div className="clip-title ellipsis" style={{ fontSize: 13.5 }}>{c.title}</div>
+                    <div className="clip-source"><span className={`badge ${c.status}`} style={{ fontSize: 10.5 }}>{c.status}</span></div>
                   </div>
-                  <button className="btn sm" onClick={() => setPlaying(c)}>▶ Validate</button>
+                  {hasVideo(c) ? (
+                    <button className="btn sm" onClick={() => setPlaying(c)}>▶ Review</button>
+                  ) : (
+                    <button className="btn sm" onClick={() => go(c.status === 'editing' ? 'assemble' : 'studio', { clipId: c.id })}>Open</button>
+                  )}
                 </div>
               ))}
             </div>
@@ -68,51 +96,33 @@ export function Dashboard({ onNavigate }: { onNavigate: (v: string) => void }) {
 
         <div className="stack">
           <div className="card card-pad">
-            <div className="card-head">
-              <h3 className="card-title">Pipeline by stage</h3>
-              <span className="card-hint">{o.total} clips</span>
-            </div>
+            <div className="card-head"><h3 className="card-title">Pipeline</h3><span className="card-hint">{clips.length} videos</span></div>
             <div className="stack" style={{ gap: 10 }}>
-              {stages.map((s) => (
+              {STAGES.map((s) => (
                 <div key={s.status}>
                   <div className="row between" style={{ marginBottom: 4 }}>
-                    <span style={{ fontSize: 13, color: 'var(--text-secondary)', textTransform: 'capitalize' }}>{s.status}</span>
-                    <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{s.count}</span>
+                    <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{s.label}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{count(s.status)}</span>
                   </div>
                   <div style={{ height: 8, background: 'var(--surface-2)', borderRadius: 4 }}>
-                    <div style={{ width: `${(s.count / maxStage) * 100}%`, height: '100%', background: 'var(--series-1)', borderRadius: 4, minWidth: s.count ? 4 : 0 }} />
+                    <div style={{ width: `${(count(s.status) / max) * 100}%`, height: '100%', background: 'var(--series-1)', borderRadius: 4, minWidth: count(s.status) ? 4 : 0 }} />
                   </div>
                 </div>
               ))}
             </div>
           </div>
-
           <div className="card card-pad">
-            <div className="card-head">
-              <h3 className="card-title">Distribution</h3>
-              <button className="btn ghost sm" onClick={() => onNavigate('scheduler')}>Publish →</button>
-            </div>
-            <div className="tbl-scroll">
-              <table className="tbl">
-                <thead>
-                  <tr>
-                    <th>Platform</th>
-                    <th className="num">Scheduled</th>
-                    <th className="num">Published</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {platforms.map((p) => (
-                    <tr key={p.platform}>
-                      <td>
-                        <span className="badge"><span className="swatch" style={{ background: p.color }} />{p.label}</span>
-                      </td>
-                      <td className="num">{p.scheduled}</td>
-                      <td className="num">{p.published}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="card-head"><h3 className="card-title">Posts by platform</h3><button className="btn ghost sm" onClick={() => go('publish')}>Publish →</button></div>
+            <div className="stack" style={{ gap: 8 }}>
+              {PLATFORMS.map((p) => {
+                const posts = clips.flatMap((c) => c.posts.filter((x) => x.platform === p))
+                return (
+                  <div key={p} className="row between" style={{ fontSize: 13.5 }}>
+                    <span className="badge"><span className="swatch" style={{ background: PLATFORM_META[p].color }} />{PLATFORM_META[p].label}</span>
+                    <span className="muted">{posts.filter((x) => x.status === 'published').length} live · {posts.filter((x) => x.status === 'scheduled').length} scheduled</span>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>
@@ -123,13 +133,10 @@ export function Dashboard({ onNavigate }: { onNavigate: (v: string) => void }) {
   )
 }
 
-function StatTile({ label, value, sub, color }: { label: string; value: string; sub: string; color: string }) {
+function Stat({ label, value, sub, color }: { label: string; value: number; sub: string; color: string }) {
   return (
     <div className="card stat">
-      <div className="stat-label">
-        <span className="stat-dot" style={{ background: color }} />
-        {label}
-      </div>
+      <div className="stat-label"><span className="stat-dot" style={{ background: color }} />{label}</div>
       <div className="stat-value">{value}</div>
       <div className="stat-delta">{sub}</div>
     </div>

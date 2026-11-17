@@ -11,11 +11,12 @@ const RATIO: Record<Clip['aspectRatio'], string> = {
 }
 
 const CHECKLIST = [
-  'Hook lands in the first 2 seconds',
-  'Framing matches the target ratio, full-bleed',
-  'No competitor logo or watermark',
-  'Captions are legible on a phone',
-  'There’s a clear payoff / reason to finish',
+  'The hook lands in the first 2 seconds',
+  'Captions are readable on a phone and clear of the bottom edge',
+  'Narration is clear and lines up with the pictures',
+  'The characters and style stay the same from clip to clip',
+  'No real people, brands, logos or copyrighted characters',
+  'Facts and steps are correct',
 ]
 
 /**

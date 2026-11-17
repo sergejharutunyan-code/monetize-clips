@@ -9,6 +9,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 COPY index.html tsconfig.json vite.config.ts ./
 COPY src ./src
+COPY shared ./shared
 RUN npm run build
 
 # ---- 2. the server (Node 22: built-in SQLite, no native build) ----
@@ -17,18 +18,20 @@ FROM node:22-slim
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ffmpeg \
  && rm -rf /var/lib/apt/lists/*
-WORKDIR /app
+WORKDIR /app/server
 
 COPY server/package.json server/package-lock.json ./
 RUN npm ci --omit=dev
 
 COPY server/ ./
+COPY shared/ /app/shared/
 COPY --from=web /web/dist ./public
 
 ENV PORT=8787
 EXPOSE 8787
 
-# Accounts, platform connections and clip videos live here: mount a volume to keep them.
+# Accounts, connections, clip videos and renders live here: mount a volume to keep them.
+ENV CLIPFORGE_DB=/app/data/clipforge.db
 VOLUME ["/app/data"]
 
 CMD ["npm", "start"]

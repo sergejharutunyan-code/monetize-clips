@@ -248,6 +248,93 @@ export async function startMockPlatforms() {
     res.status(p.received === p.size ? 201 : 206).end()
   })
 
+  // ---------- Anthropic Messages API (just enough for the studio) ----------
+  state.claude = { calls: [], plotAnswersInProse: true, trendsPause: true }
+  app.post('/anthropic/v1/messages', json, (req, res) => {
+    const b = req.body
+    const betas = String(req.headers['anthropic-beta'] || '')
+    const key = req.headers['x-api-key'] || String(req.headers.authorization || '').replace(/^Bearer /, '')
+    state.claude.calls.push({ body: b, betas, version: req.headers['anthropic-version'], key })
+    if (key !== 'sk-ant-test') {
+      return res.status(401).json({ type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } })
+    }
+    const names = (b.tools || []).map((t) => t.name)
+    const msg = (content, stop_reason) =>
+      res.json({ id: next('msg_'), type: 'message', role: 'assistant', model: b.model, content, stop_reason, stop_sequence: null, usage: { input_tokens: 10, output_tokens: 10 } })
+    const turns = b.messages.filter((m) => m.role === 'assistant').length
+    if (names.includes('report_trends')) {
+      if (state.claude.trendsPause && turns === 0) {
+        return msg([
+          { type: 'server_tool_use', id: 'srvtoolu_1', name: 'web_search', input: { query: 'trending this week' } },
+          { type: 'web_search_tool_result', tool_use_id: 'srvtoolu_1', content: [{ type: 'web_search_result', url: 'https://news.example.com/sleep', title: 'Why everyone is trying sleepy girl mocktails', encrypted_content: 'x', page_age: null }] },
+        ], 'pause_turn')
+      }
+      return msg([
+        { type: 'text', text: 'Here is what I found.' },
+        { type: 'tool_use', id: 'toolu_t', name: 'report_trends', input: { trends: [
+          { title: 'Bedtime mocktails', summary: 'A drink people make before bed to sleep better.', why_now: 'Searches tripled this week after a viral post.', niche: 'Wellness', freshness: 'this_week',
+            angles: [{ format: 'myth', idea: 'Does a bedtime mocktail really help you sleep?' }, { format: 'howto', idea: 'Make the 3-ingredient version' }],
+            sources: [{ title: 'Why everyone is trying sleepy girl mocktails', url: 'https://news.example.com/sleep' }], caution: '' },
+          { title: 'Leap second debate', summary: 'Clocks might stop adding leap seconds.', why_now: 'A standards vote is this week.', niche: 'Science', freshness: 'this_week',
+            angles: [{ format: 'explainer', idea: 'Why the Earth makes clocks wrong' }], sources: [], caution: '' },
+        ] } },
+      ], 'tool_use')
+    }
+    if (names.includes('submit_plot')) {
+      if (state.claude.plotAnswersInProse && turns === 0) return msg([{ type: 'text', text: 'Here is a plot idea in prose…' }], 'end_turn')
+      const scenes = [
+        ['Mo yawns at 3 a.m., staring at the ceiling', 'close-up, slow push in', 'It is 3 a.m. and Mo has tried everything.', '3 A.M. AGAIN', 'clock ticking'],
+        ['Mo scrolls a giant glowing phone, eyes wide', 'medium shot', 'Then the internet says: drink this before bed.', 'THE INTERNET SAYS', 'phone buzz'],
+        ['Mo mixes cherry juice and sparkling water in a tall glass', 'overhead shot', 'Cherry juice, magnesium, a splash of bubbles.', '3 INGREDIENTS', 'fizz'],
+        ['Mo lies down, glass empty, waiting dramatically', 'wide shot, static', 'Mo waits. And waits.', 'WAITING…', 'cricket chirps'],
+        ['Mo snores peacefully as the moon winks', 'wide shot, slow pull out', 'Does it work? A little. The routine helps more than the drink.', 'ROUTINE > DRINK', 'soft snore'],
+      ]
+      return msg([{ type: 'tool_use', id: 'toolu_p', name: 'submit_plot', input: {
+        title: 'Does the bedtime mocktail work?', hook: 'It is 3 a.m. and Mo has tried everything.', logline: 'Mo tests the viral bedtime drink.',
+        beats: ['Hook', 'Setup', 'Test', 'Wait', 'Verdict'], characters: [{ name: 'Mo', look: 'a chunky tangerine-orange blob with stubby arms' }],
+        scenes: scenes.map(([visual, camera, narration, on_screen_text, sfx]) => ({ duration_sec: 6, visual, camera, narration, on_screen_text, sfx })),
+        caption: 'Would you try it?', hashtags: ['sleep', '#mocktail', 'bedtime routine'], fact_notes: 'Tart cherry has some evidence for sleep; modest effect.',
+      } }], 'tool_use')
+    }
+    res.status(400).json({ type: 'error', error: { type: 'invalid_request_error', message: 'unexpected request' } })
+  })
+
+  // ---------- Higgsfield ----------
+  state.hf = { submits: [], polls: {}, videoFile: null }
+  app.post(/^\/hf\/([a-z0-9][a-z0-9._-]*(?:\/[a-z0-9][a-z0-9._-]*)+)$/i, json, (req, res) => {
+    const path = req.params[0]
+    if (req.headers.authorization !== 'Key hf-id:hf-secret') return res.status(401).json({ detail: 'Not authenticated' })
+    if (path.startsWith('requests/')) return res.status(404).json({ detail: 'Not Found' })
+    if (!path.includes('text-to-video')) return res.status(404).json({ detail: 'Model not found' })
+    const b = req.body || {}
+    if (!b.prompt || !Number.isInteger(b.duration) || b.duration < 4 || b.duration > 30) return res.status(422).json({ detail: [{ msg: 'duration must be 4-30' }] })
+    const id = next('hfreq_')
+    state.hf.submits.push({ id, model: path, body: b })
+    state.hf.polls[id] = 0
+    res.json({ status: 'queued', request_id: id, status_url: `${base}/hf/requests/${id}/status`, cancel_url: `${base}/hf/requests/${id}/cancel` })
+  })
+  app.get('/hf/requests/:id/status', (req, res) => {
+    if (req.headers.authorization !== 'Key hf-id:hf-secret') return res.status(401).json({ detail: 'Not authenticated' })
+    const sub = state.hf.submits.find((x) => x.id === req.params.id)
+    if (!sub) return res.status(404).json({ detail: 'Not Found' })
+    const n = ++state.hf.polls[sub.id]
+    if (/NSFWTEST/.test(sub.body.prompt)) return res.json({ status: 'nsfw', request_id: sub.id })
+    if (n < 2) return res.json({ status: 'queued', request_id: sub.id })
+    if (n < 3) return res.json({ status: 'in_progress', request_id: sub.id })
+    res.json({ status: 'completed', request_id: sub.id, video: { url: `${base}/hf-files/${sub.id}.mp4` } })
+  })
+  app.post('/hf/requests/:id/cancel', (_req, res) => res.status(202).json({ ok: true }))
+  app.get('/hf-files/:name', (_req, res) => (state.hf.videoFile ? res.type('video/mp4').sendFile(state.hf.videoFile) : res.status(404).end()))
+
+  // ---------- Google Trends RSS ----------
+  app.get('/google-trends/rss', (req, res) => {
+    res.type('application/rss+xml').send(`<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:ht="https://trends.google.com/trending/rss"><channel>
+<item><title>northern lights tonight</title><ht:approx_traffic>500K+</ht:approx_traffic><ht:picture>https://img.example.com/a.jpg</ht:picture>
+<ht:news_item><ht:news_item_title>Aurora could be visible as far south as Texas</ht:news_item_title><ht:news_item_url>https://news.example.com/aurora</ht:news_item_url><ht:news_item_source>Example News</ht:news_item_source></ht:news_item></item>
+<item><title><![CDATA[daylight saving &amp; you]]></title><ht:approx_traffic>100K+</ht:approx_traffic></item>
+</channel></rss>`.replace('?geo', ''))
+  })
+
   const server = await new Promise((resolve) => {
     const s = app.listen(0, '127.0.0.1', () => resolve(s))
   })
@@ -264,6 +351,9 @@ export async function startMockPlatforms() {
       INSTAGRAM_GRAPH_BASE: `${base}/iggraph`,
       TIKTOK_AUTH_URL: `${base}/tt/authorize`,
       TIKTOK_API_BASE: `${base}/tt`,
+      ANTHROPIC_BASE_URL: `${base}/anthropic`,
+      HIGGSFIELD_API_BASE: `${base}/hf`,
+      GOOGLE_TRENDS_RSS: `${base}/google-trends/rss`,
     },
     close: () => new Promise((r) => server.close(r)),
   }

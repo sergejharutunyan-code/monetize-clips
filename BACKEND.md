@@ -1,15 +1,22 @@
 # ClipForge backend
 
-One Node service that makes the app whole:
+One Node service that holds the keys and does the heavy lifting:
 
-- **Stores your finished clips** and converts each one with ffmpeg to the format
-  every platform accepts (MP4, H.264 + AAC, 30 fps, index up front).
-- **Publishes** a clip to **YouTube** (Shorts), **Instagram** (Reels) and
-  **TikTok** — immediately or at a scheduled time — and reports back the live
-  link or the platform's reason if it fails.
+- **Claude**: trend research with web search and plot writing, with the API key
+  kept on the server.
+- **Higgsfield**: generates each clip of a plot through the Higgsfield API,
+  follows it to completion and saves the result (Higgsfield’s links expire).
+- **Trend signals**: Google Trends’ daily searches and YouTube’s most popular.
+- **Stores videos** and converts each one with ffmpeg to the format every
+  platform accepts (MP4, H.264 + AAC, 30 fps, index up front).
+- **Publishes** to **YouTube** (Shorts), **Instagram** (Reels) and **TikTok** —
+  immediately or at a scheduled time — and reports back the live link or the
+  platform's reason if it fails.
 - **Serves the web app** itself, so one process (or one container) is the whole
-  product.
-- Accounts, cloud clip sync, and the Claude / YouTube-trending proxies.
+  product. Accounts and cloud sync of your video list are included.
+
+Everything except publishing, Higgsfield-by-API and Google Trends also works
+without the backend (the GitHub Pages site can call Claude with your own key).
 
 It uses Node 22's built-in SQLite — no database to install, no native build.
 
@@ -49,6 +56,37 @@ of this blueprint, sync it again — the image is now built from the repo root.
 Open the app, go to **Accounts**, create an account, and connect your platforms.
 When the app is opened from the backend's own address it finds the backend by
 itself; the GitHub Pages copy asks for the backend URL once.
+
+## Claude (research and writing)
+
+1. [console.anthropic.com](https://console.anthropic.com/) → API keys → create a key.
+   Set a monthly spend limit there.
+2. Set `ANTHROPIC_API_KEY` on the backend. The model is `claude-opus-5-5`
+   (`CLIPFORGE_MODEL` overrides it).
+
+Trend research runs web searches (billed per search, up to 8 per research run);
+plot writing runs up to 4 to fact-check. Both send `fallbacks: "default"`, so a
+request Claude declines is retried on a fallback model automatically. The AI
+routes need a signed-in account, so the server key is never open to the internet.
+
+## Higgsfield (video generation)
+
+1. [console.higgsfield.ai](https://console.higgsfield.ai/) → API keys → create a
+   key. It has a **key ID** and a **secret**; the account needs a funded balance.
+2. Set `HIGGSFIELD_KEY_ID` and `HIGGSFIELD_KEY_SECRET` (or `HIGGSFIELD_KEY` as
+   `id:secret`). Optional: `HIGGSFIELD_MODEL` for the default model path.
+
+The Studio offers Seedance 2.5 (4–30 s clips, with sound) and Seedance 2.0
+(4–15 s); any other Higgsfield model path can be set as the default. Each
+generation is `POST https://api.higgsfield.ai/<model path>` with `prompt`,
+`duration`, `resolution`, `aspect_ratio` and `generate_audio`, then polled at
+`/requests/<id>/status` until it is `completed`; the video is downloaded into
+storage. A generation rejected by Higgsfield’s moderation (`nsfw`) is reported
+in plain words and its credits are refunded by Higgsfield.
+
+> The Higgsfield integration is built from Higgsfield’s published API docs and
+> tested against a stand-in. Model fields can differ by model: check the model’s
+> page on open.higgsfield.ai if a request is refused.
 
 ## Connecting the platforms
 
@@ -144,8 +182,9 @@ upload links. Mark it posted and it is tracked like any other post.
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | YouTube publishing. |
 | `INSTAGRAM_APP_ID` / `INSTAGRAM_APP_SECRET` | Instagram publishing. |
 | `TIKTOK_CLIENT_KEY` / `TIKTOK_CLIENT_SECRET` | TikTok publishing. |
-| `ANTHROPIC_API_KEY`, `CLIPFORGE_MODEL` | AI workshop. |
-| `YOUTUBE_API_KEY` | Server-side YouTube trending. |
+| `ANTHROPIC_API_KEY`, `CLIPFORGE_MODEL` | Claude trend research and plot writing. |
+| `HIGGSFIELD_KEY_ID` / `HIGGSFIELD_KEY_SECRET`, `HIGGSFIELD_MODEL` | Higgsfield video generation. |
+| `YOUTUBE_API_KEY` | YouTube most-popular as a trend source. |
 
 ## Endpoints
 
@@ -164,8 +203,14 @@ upload links. Mark it posted and it is tracked like any other post.
 | POST | `/api/publish` | token | Publish a clip to one or more platforms, now or at `scheduledAt` |
 | GET | `/api/jobs` | token | Status of posts (progress, live link, or error) |
 | POST | `/api/jobs/:id/cancel` · `/retry` | token | Cancel a scheduled post / retry a failed one |
-| POST | `/api/analyze` | – | Claude two-part workshop (server key) |
-| GET | `/api/trending` | – | YouTube "most popular" (server key) |
+| POST | `/api/ai/trends` | token | Claude trend research with web search |
+| POST | `/api/ai/plot` | token | Claude plot package for a trend, format, style and length |
+| GET | `/api/trends/google` | token | Google Trends daily searches (`?geo=US`) |
+| GET | `/api/trending` | token | YouTube "most popular" (server key) |
+| GET | `/api/higgsfield` | token | Whether Higgsfield is set up, and the models offered |
+| POST | `/api/higgsfield/renders` | token | Generate the parts of a plot |
+| GET | `/api/higgsfield/renders` | token | Render status (`?ids=` or `?clipId=`), with the saved video when done |
+| POST | `/api/higgsfield/renders/:id/cancel` · `/retry` | token | Cancel or retry one generation |
 
 Auth is a **Bearer token** (`Authorization: Bearer <token>`) returned by
 register/login — no cookies, so it works cross-origin. Platform tokens never
@@ -182,10 +227,11 @@ platform, then press Retry.
 npm test          # from the repo root (runs the server suite; needs ffmpeg)
 ```
 
-The suite starts a stand-in for the three platforms' APIs
-(`server/test/mock-platforms.mjs`, written from their published request and
-response formats) and drives the real server through sign-in, upload,
-conversion, publishing to all three, scheduling, cancel, retry and token
-refresh. It proves the app's side end to end; it cannot prove that each
-platform's live API accepts your particular developer app — that only shows when
-you connect real credentials.
+The suite starts stand-ins for Claude, Higgsfield, Google Trends and the three
+platforms' APIs (`server/test/mock-platforms.mjs`, written from their published
+request and response formats) and drives the real server through trend research
+(including a paused web-search turn), plot writing, Higgsfield generation and
+download, upload and conversion, publishing to all three, scheduling, cancel,
+retry and token refresh. It proves the app's side end to end; it cannot prove that each
+service's live API accepts your particular keys — that only shows when you
+connect real credentials.

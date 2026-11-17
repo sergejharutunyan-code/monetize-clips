@@ -58,3 +58,38 @@ export function useConnections(): ConnectionsState {
 
   return { info, loading, error, reload }
 }
+
+export interface HiggsfieldState {
+  /** The backend can call Higgsfield for you. */
+  available: boolean
+  models: import('./api').HiggsfieldModel[]
+  defaultModel: string
+  loading: boolean
+}
+
+const FALLBACK_MODELS: import('./api').HiggsfieldModel[] = [
+  { path: 'bytedance/seedance-2.5/text-to-video', label: 'Seedance 2.5 · 4–30s · sound', minSeconds: 4, maxSeconds: 30, audio: true },
+  { path: 'bytedance/seedance-2.0/text-to-video', label: 'Seedance 2.0 · 4–15s · sound', minSeconds: 4, maxSeconds: 15, audio: true },
+]
+
+/** Whether generation can run through the backend, and with which models. */
+export function useHiggsfield(): HiggsfieldState {
+  const backend = useBackend()
+  const [state, setState] = useState<HiggsfieldState>({ available: false, models: FALLBACK_MODELS, defaultModel: FALLBACK_MODELS[0].path, loading: false })
+  useEffect(() => {
+    let live = true
+    if (!isSignedIn(backend)) {
+      setState((s) => ({ ...s, available: false, loading: false }))
+      return
+    }
+    setState((s) => ({ ...s, loading: true }))
+    import('./api')
+      .then(({ higgsfieldInfo }) => higgsfieldInfo(backend.apiUrl, backend.token))
+      .then((r) => live && setState({ available: r.configured, models: r.models.length ? r.models : FALLBACK_MODELS, defaultModel: r.defaultModel, loading: false }))
+      .catch(() => live && setState((s) => ({ ...s, available: false, loading: false })))
+    return () => {
+      live = false
+    }
+  }, [backend])
+  return state
+}

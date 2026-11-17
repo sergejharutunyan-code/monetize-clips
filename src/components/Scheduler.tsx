@@ -158,7 +158,7 @@ export function Scheduler({ onPublish, onOpenAccounts }: { onPublish: (clipId: s
             <span className="card-hint">{ready.length} clips</span>
           </div>
           {ready.length === 0 ? (
-            <div className="empty">Nothing waiting. Cut a clip in the Clip Editor.</div>
+            <div className="empty">Nothing waiting. Finish a video in Assemble.</div>
           ) : (
             <div className="stack" style={{ gap: 8 }}>
               {ready.map((c) => (
@@ -169,7 +169,6 @@ export function Scheduler({ onPublish, onOpenAccounts }: { onPublish: (clipId: s
                     <div className="clip-source row" style={{ gap: 8 }}>
                       <PlatformDots posts={c.posts} />
                       {!hasVideo(c) && <span>no video yet</span>}
-                      {c.rights === 'unverified' && <span className="bad-text">rights unverified</span>}
                     </div>
                   </div>
                   <button className="btn primary sm" style={{ flexShrink: 0 }} onClick={() => onPublish(c.id)}>Publish…</button>

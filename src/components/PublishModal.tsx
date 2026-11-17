@@ -137,7 +137,6 @@ export function PublishModal({ clipId, onClose, onOpenAccounts }: { clipId: stri
   const reminders = chosen.filter((p) => !apiReady(p))
 
   const hasVideoFile = Boolean(clip && (clip.localMediaId || clip.videoUrl || clip.mediaId))
-  const needsRights = clip?.rights === 'unverified'
   const tooLong = Array.from(caption).length > LIMITS.caption
 
   const warnings = useMemo(() => {
@@ -330,7 +329,7 @@ export function PublishModal({ clipId, onClose, onOpenAccounts }: { clipId: stri
             </label>
             {!hasVideoFile && (
               <div className="muted" style={{ fontSize: 11.5, marginTop: 6 }}>
-                Cut one in the Clip Editor, or attach a finished clip here.
+                Export the final cut in Assemble, or attach a finished video here.
               </div>
             )}
           </div>
@@ -354,19 +353,9 @@ export function PublishModal({ clipId, onClose, onOpenAccounts }: { clipId: stri
 
             {!signedIn && manualBox}
 
-            {needsRights && (
-              <div className="callout">
-                <strong>Confirm the rights first.</strong> This clip is marked “unverified”. Only publish footage you own, have licensed, or have permission to use.
-                <div style={{ marginTop: 8 }}>
-                  <select className="mini-select" value={clip.rights} onChange={(e) => updateClip(clip.id, { rights: e.target.value as Clip['rights'] })} aria-label="Rights">
-                    <option value="unverified">Not verified yet</option>
-                    <option value="owned">I own this content</option>
-                    <option value="licensed">Licensed / stock</option>
-                    <option value="permission">Creator gave permission</option>
-                  </select>
-                </div>
-              </div>
-            )}
+            <div className="callout info">
+              <strong>Label it as AI-generated</strong> when the platform asks: TikTok’s “AI-generated content” switch, Instagram’s “AI info” label, and YouTube’s altered-content question (cartoons usually answer “no”, but disclose if anything looks real).
+            </div>
 
             <div>
               <div className="row between" style={{ marginBottom: 8 }}>
@@ -493,8 +482,8 @@ export function PublishModal({ clipId, onClose, onOpenAccounts }: { clipId: stri
 
             <div className="row wrap" style={{ gap: 10 }}>
               <button className="btn primary" onClick={() => void submit()}
-                disabled={busy || chosen.length === 0 || needsRights || tooLong || (auto.length > 0 && !hasVideoFile)}
-                title={needsRights ? 'Confirm the rights first' : auto.length > 0 && !hasVideoFile ? 'Attach a video first' : ''}>
+                disabled={busy || chosen.length === 0 || tooLong || (auto.length > 0 && !hasVideoFile)}
+                title={auto.length > 0 && !hasVideoFile ? 'Export or attach the final video first' : ''}>
                 {busy ? statusText
                   : when === 'later' ? (chosen.length ? `Schedule ${chosen.length} post${chosen.length === 1 ? '' : 's'}` : 'Schedule')
                     : chosen.length ? `Publish to ${chosen.length} platform${chosen.length === 1 ? '' : 's'}` : 'Publish'}

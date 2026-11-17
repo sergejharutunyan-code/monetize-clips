@@ -1,17 +1,21 @@
-export type AIProvider = 'local' | 'claude'
+/**
+ * Which Claude the studio uses.
+ * - auto:    the backend's key when signed in to a backend that has one, else your own key, else offline
+ * - backend: always the backend
+ * - key:     your own Anthropic API key, called straight from this browser
+ * - offline: the built-in template writer (no research)
+ */
+export type AIMode = 'auto' | 'backend' | 'key' | 'offline'
 
 export interface AISettings {
-  provider: AIProvider
-  /** Base URL of the Claude proxy server (see /server). */
-  proxyUrl: string
+  mode: AIMode
+  /** Your own Anthropic API key. Stored only in this browser. */
+  apiKey: string
 }
 
-const KEY = 'clipforge.ai.v1'
-
-const DEFAULTS: AISettings = {
-  provider: 'local',
-  proxyUrl: 'http://localhost:8787',
-}
+const KEY = 'clipforge.ai.v2'
+const DEFAULTS: AISettings = { mode: 'auto', apiKey: '' }
+const CHANGED = 'clipforge:ai-changed'
 
 export function loadAISettings(): AISettings {
   try {
@@ -29,4 +33,10 @@ export function saveAISettings(s: AISettings): void {
   } catch {
     // ignore
   }
+  window.dispatchEvent(new Event(CHANGED))
+}
+
+export function onAISettingsChange(fn: () => void): () => void {
+  window.addEventListener(CHANGED, fn)
+  return () => window.removeEventListener(CHANGED, fn)
 }
